@@ -40,7 +40,8 @@ import {
   saveArticleToFirestore,
   deleteArticleFromFirestore,
   subscribeToSettings,
-  saveSettingsToFirestore
+  saveSettingsToFirestore,
+  clearStockProductsInFirestore
 } from './firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 
@@ -355,7 +356,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error("Server review writer returned error code.");
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server returned status code ${response.status}`);
       }
 
       const freshArticle: AmazonProductArticle = await response.json();
@@ -379,10 +381,10 @@ export default function App() {
 
       // Navigate to public view to preview
       navigateTo('/');
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI review writer failed:", err);
-      alert("執筆生成中にエラーが発生しました。サーバー状況を確認してください。");
-      pushLog(`API執筆プロセスに一時的な遅延が発生。フェイルオーバー待機。`, "warn");
+      alert(`執筆生成中にエラーが発生しました。\nエラー詳細: ${err.message || err}`);
+      pushLog(`API執筆プロセスに失敗: ${err.message || err}`, "warn");
     } finally {
       setGenerationLoading(false);
     }
@@ -483,6 +485,8 @@ export default function App() {
         for (const art of cleanArticles) {
           await saveArticleToFirestore(art);
         }
+        // Clear stock products
+        await clearStockProductsInFirestore();
       }
 
       setState(prev => ({

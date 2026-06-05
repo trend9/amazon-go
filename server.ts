@@ -420,9 +420,9 @@ Always output your entire response formatted as a strict single JSON object foll
       aiModelUsed: "Gemini 3.5 Flash"
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Generation failed:", error);
-    res.status(500).json({ error: "AI記事作成プロセスに失敗しました。" });
+    res.status(500).json({ error: `AI記事作成プロセスに失敗しました。詳細: ${error.message || error}` });
   }
 });
 

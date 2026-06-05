@@ -137,6 +137,21 @@ export async function saveSettingsToFirestore(associateId: string, fallbackAdUrl
 }
 
 /**
+ * Deletes all documents in stock_products collection.
+ */
+export async function clearStockProductsInFirestore(): Promise<void> {
+  try {
+    const stockCol = collection(db, 'stock_products');
+    const snap = await getDocs(stockCol);
+    for (const docSnap of snap.docs) {
+      await deleteDoc(doc(db, 'stock_products', docSnap.id));
+    }
+  } catch (err) {
+    console.warn('Clearing stock_products failed:', err);
+  }
+}
+
+/**
  * Subscribes to settings config in Firestore.
  */
 export function subscribeToSettings(
