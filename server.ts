@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const app = express();
@@ -9,6 +9,7 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Direct Firestore REST API logger to bypass Firebase client SDK compatibility crashes on Vercel Node runtime
 function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
   const projectId = "go-app-4dcb9";
   const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
@@ -38,15 +39,87 @@ function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'in
   console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
-// Initialize server-side Gemini client
-let ai: GoogleGenAI | null = null;
-if (process.env.GEMINI_API_KEY) {
-  ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY
-  });
-  console.log("Amazon GO AI: Gemini API initialized successfully.");
+const isAiEnabled = !!process.env.GEMINI_API_KEY;
+if (isAiEnabled) {
+  console.log("Amazon GO AI: Gemini API key is configured. Ready for REST requests.");
 } else {
   console.warn("Warning: GEMINI_API_KEY not found in environment variables. Running in mock mode.");
+}
+
+// Standalone REST-based Gemini client to completely bypass @google/genai SDK compatibility crashes on Vercel Node runtime
+async function generateGeminiReviewREST(prompt: string, apiKey: string): Promise<any> {
+  const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      console.log(`Attempting content generation via REST with model: ${model}...`);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          systemInstruction: {
+            parts: [{
+              text: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
+Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
+You know how to convert raw product features into absolute life-changing experiences for the consumer.
+CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
+Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`
+            }]
+          },
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                title: { type: "STRING", description: "思わず目が留まる魅力的な日本語記事タイトル" },
+                starRating: { type: "NUMBER", description: "製品への評価点数 (4.0から4.9までの小数)" },
+                introText: { type: "STRING", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+                features: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+                },
+                pros: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
+                },
+                cons: {
+                  type: "ARRAY",
+                  items: { type: "STRING" },
+                  description: "正直に伝えるデメリットや留意点 2個"
+                },
+                reviewBody: { type: "STRING", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
+                ctaTitle: { type: "STRING", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
+              },
+              required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
+            }
+          }
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Gemini REST returned status ${res.status}: ${await res.text()}`);
+      }
+
+      const data: any = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error("Empty response from Gemini REST");
+      }
+      const parsed = JSON.parse(text.trim());
+      parsed.aiModelUsed = model;
+      return parsed;
+    } catch (err) {
+      console.warn(`REST model ${model} failed:`, err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("All models failed to generate content via REST");
 }
 
 // Robots.txt to hide host administration paths and keep it clean
@@ -57,7 +130,7 @@ app.get("/robots.txt", (req, res) => {
 
 // 1. Health Status check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", aiEnabled: !!ai });
+  res.json({ status: "ok", aiEnabled: isAiEnabled });
 });
 
 // A robust list of gorgeous, high-resolution royalty-free stock mock product images by category to make everything look pristine and non-empty.
@@ -96,7 +169,6 @@ const CATEGORY_IMAGE_BANK: Record<string, string[]> = {
 
 function selectProductMockImage(cat: string, namePrompt: string): string {
   const images = CATEGORY_IMAGE_BANK[cat] || CATEGORY_IMAGE_BANK["gadgets"];
-  // Deterministic seed based on length of product name to keep it consistent
   const index = Math.abs(namePrompt.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) % images.length;
   return images[index];
 }
@@ -255,19 +327,16 @@ app.post("/api/generate-amazon-review", async (req, res) => {
   } else if (searchMatch && searchMatch[1]) {
     searchKeyword = decodeURIComponent(searchMatch[1]);
   } else {
-    // Check if it's a plain keyword
     const isUrl = (inputUrl || "").startsWith("http");
     if (!isUrl && (inputUrl || "").trim().length > 0) {
       searchKeyword = (inputUrl || "").trim();
     }
   }
 
-  // Fallback to active JP ASIN if neither is resolved
   if (!detectedAsin && !searchKeyword) {
-    detectedAsin = "B0CL7Y437Z"; // Valid active Fire TV Stick ASIN
+    detectedAsin = "B0CL7Y437Z";
   }
 
-  // Pre-configured link
   const finalAffLink = customAffiliateLink && customAffiliateLink.trim()
     ? customAffiliateLink.trim()
     : (detectedAsin 
@@ -300,8 +369,7 @@ app.post("/api/generate-amazon-review", async (req, res) => {
 
   let finalImg = selectProductMockImage(targetCategory, userCustomTitle || searchKeyword || inputUrl || detectedAsin || "product");
 
-  if (!ai) {
-    // Generate lovely mock response when API key is missing
+  if (!isAiEnabled) {
     const defaultTitles: Record<string, string> = {
       gadgets: "【超高音質】JBL Tour Pro 2はスマートタッチ画面付きで驚愕の便利さ！徹底時短レビュー",
       pc: "【爆速化】Samsung 990 PRO NVMe M.2 SSDでゲームロード時間が実質0秒になった件",
@@ -379,66 +447,8 @@ Amazonで買うからこそ最高の保証と即納スピード
 レスポンスは必ず以下のJSONスキーマに合わせてください（markdownブロックで囲わずJSON。日本語で記述してください）。
 `;
 
-    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
-    let response: any = null;
-    let successModel = "";
-    let lastError: any = null;
-
-    for (const modelName of modelsToTry) {
-      try {
-        console.log(`Attempting content generation with model: ${modelName}...`);
-        response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
-Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
-You know how to convert raw product features into absolute life-changing experiences for the consumer.
-CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
-Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
-                starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
-                introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
-                features: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
-                },
-                pros: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
-                },
-                cons: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "正直に伝えるデメリットや留意点 2個"
-            },
-                reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
-                ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
-              },
-              required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
-            }
-          }
-        });
-        successModel = modelName;
-        console.log(`AI Generation succeeded with model: ${modelName}`);
-        break;
-      } catch (err) {
-        console.error(`AI Generation failed with model ${modelName}:`, err);
-        lastError = err;
-      }
-    }
-
-    if (!response) {
-      throw lastError || new Error("All models failed to generate content");
-    }
-
-    const outputJson = JSON.parse(response.text?.trim() || "{}");
+    const outputJson = await generateGeminiReviewREST(prompt, process.env.GEMINI_API_KEY!);
+    const successModel = outputJson.aiModelUsed || "gemini-1.5-flash";
 
     res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
@@ -490,7 +500,7 @@ Always output your entire response formatted as a strict single JSON object foll
       starRating: parseFloat((4.3 + Math.random() * 0.6).toFixed(1)),
       introText: `今回ご紹介するのは、Amazonのセールやランキングでも圧倒的上位を獲得している大注目製品です。実際に日々のQOL（生活の質）が爆発的に高まるかどうかを徹底的に使って検証しました。結論、迷っているなら今すぐ手に入れるべき価値があります！`,
       features: [
-        "圧倒的な業界最高レベルのコストパフォーマンスと抜群の耐久設計",
+        "圧倒的な業界最高レベル of コストパフォーマンスと抜群の耐久設計",
         "直感的で誰にでも分かりやすいスマートな操作感と極めて快適な装着・使用感",
         "Amazonポイント還元プログラムや迅速なお急ぎ便配送対応"
       ],
@@ -552,4 +562,3 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
-
