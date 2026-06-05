@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to verify if the authenticated user is the designated admin
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.token.email == 'mattan029@gmail.com';
+    }
+
+    // Articles catalog is readable by any public visitor, but writable only by the admin
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+
+    // Config parameters are readable by anyone, only writable by the admin
+    match /settings/config {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+    }
+  }
+}

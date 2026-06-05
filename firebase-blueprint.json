@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "Article": {
+      "title": "AmazonProductArticle",
+      "description": "アフィリエイトID組込済みのAmazon商品紹介レビュー記事データ",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "一意の記事識別ID" },
+        "title": { "type": "string", "description": "日本語で記述された記事の魅力的なタイトル" },
+        "originalUrl": { "type": "string", "format": "uri", "description": "元のAmazon商品URL" },
+        "asin": { "type": "string", "description": "10文字のAmazon一意識別コード (ASIN)" },
+        "category": { "type": "string", "description": "商品の分類カテゴリー" },
+        "imageUrl": { "type": "string", "format": "uri", "description": "Unsplashまたはモック製品の画像アドレス" },
+        "starRating": { "type": "number", "description": "評価点数 (4.0〜5.0)" },
+        "introText": { "type": "string", "description": "ユーザーの心を引き込むリードテキスト" },
+        "features": { "type": "array", "items": { "type": "string" }, "description": "商品の強みやアピールポイントリスト" },
+        "pros": { "type": "array", "items": { "type": "string" }, "description": "製品のメリット" },
+        "cons": { "type": "array", "items": { "type": "string" }, "description": "製品のデメリットやチェックポイント" },
+        "reviewBody": { "type": "string", "description": "Markdown形式で執筆された極上レビュー本文" },
+        "ctaTitle": { "type": "string", "description": "CTAボタンの見出しテキスト" },
+        "affiliateLink": { "type": "string", "format": "uri", "description": "Associate IDが組み込まれたアフィリエイトリンク" },
+        "createdAt": { "type": "string", "description": "作成された日付文字列" },
+        "estimatedPV": { "type": "number", "description": "アクセスPV数カウント" },
+        "clicks": { "type": "number", "description": "クリック数カウント" },
+        "earnings": { "type": "number", "description": "発生したシミュレーション成果金額" },
+        "aiModelUsed": { "type": "string", "description": "執筆に使用したGeminiモデル名" }
+      },
+      "required": ["id", "title", "asin", "category", "imageUrl", "starRating", "reviewBody", "affiliateLink"]
+    },
+    "Settings": {
+      "title": "AmazonGoSettings",
+      "description": "Amazon Goエンジンの環境、アソシエイトID情報",
+      "type": "object",
+      "properties": {
+        "associateId": { "type": "string", "description": "アソシエイトID" },
+        "fallbackAdUrl": { "type": "string", "description": "フォールバック広告遷移先URL" }
+      },
+      "required": ["associateId", "fallbackAdUrl"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "管理人がGeminiで量産公開した記事カタログデータ"
+    },
+    "/settings/config": {
+      "schema": "Settings",
+      "description": "アソシエイト認証・広告設定情報"
+    }
+  }
+}

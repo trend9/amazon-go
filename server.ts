@@ -1,0 +1,280 @@
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+
+// Initialize server-side Gemini 3.5 client
+let ai: GoogleGenAI | null = null;
+if (process.env.GEMINI_API_KEY) {
+  ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+  console.log("Amazon GO AI: Gemini API initialized successfully.");
+} else {
+  console.warn("Warning: GEMINI_API_KEY not found in environment variables. Running in mock mode.");
+}
+
+// Robots.txt to hide host administration paths and keep it clean
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain");
+  res.send("User-agent: *\nDisallow: /host\nDisallow: /api/\n");
+});
+
+// 1. Health Status check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", aiEnabled: !!ai });
+});
+
+// A robust list of gorgeous, high-resolution royalty-free stock mock product images by category to make everything look pristine and non-empty.
+const CATEGORY_IMAGE_BANK: Record<string, string[]> = {
+  gadgets: [
+    "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=600", // Phone
+    "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=600", // smart home
+    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"  // headphone
+  ],
+  pc: [
+    "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=600", // keyboard
+    "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=600", // monitor
+    "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&q=80&w=600"  // router
+  ],
+  kitchen: [
+    "https://images.unsplash.com/photo-1584269603463-35149fa7e826?auto=format&fit=crop&q=80&w=600", // toaster
+    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=600", // air fryer
+    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600"  // pot
+  ],
+  beauty: [
+    "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=600", // dryer
+    "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=600", // moisturizer
+    "https://images.unsplash.com/photo-1608248597481-496100c80836?auto=format&fit=crop&q=80&w=600"  // serum
+  ],
+  fashion: [
+    "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=600", // backpack
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600", // sneaker
+    "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600"  // shirt
+  ],
+  "books-games": [
+    "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600", // book
+    "https://images.unsplash.com/photo-1486572788966-cfd3df1f5b42?auto=format&fit=crop&q=80&w=600", // gaming controller
+    "https://images.unsplash.com/photo-1612287230202-1bf1d85d1bdf?auto=format&fit=crop&q=80&w=600"  // Switch/PSP console
+  ]
+};
+
+function selectProductMockImage(cat: string, namePrompt: string): string {
+  const images = CATEGORY_IMAGE_BANK[cat] || CATEGORY_IMAGE_BANK["gadgets"];
+  // Deterministic seed based on length of product name to keep it consistent
+  const index = Math.abs(namePrompt.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) % images.length;
+  return images[index];
+}
+
+// 2. High-Performance Review Generator API
+app.post("/api/generate-amazon-review", async (req, res) => {
+  const { inputUrl, category, associateId, userCustomTitle } = req.body;
+
+  const targetCategory = category || "gadgets";
+  const userTag = associateId || "amazongo-22";
+
+  // Helper patterns for extraction
+  // Extract ASIN as well if possible e.g. B0xxxxxx from URL
+  let detectedAsin = "B08N5WRWNW"; // Fallback ASIN
+  const asinMatch = (inputUrl || "").match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/i);
+  if (asinMatch && asinMatch[2]) {
+    detectedAsin = asinMatch[2].toUpperCase();
+  } else if ((inputUrl || "").trim().length === 10 && /^[A-Z0-9]+$/i.test((inputUrl || "").trim())) {
+    detectedAsin = (inputUrl || "").trim().toUpperCase();
+  }
+
+  // Pre-configured link
+  const finalAffLink = `https://www.amazon.co.jp/dp/${detectedAsin}?tag=${userTag}`;
+
+  let finalImg = selectProductMockImage(targetCategory, userCustomTitle || detectedAsin);
+
+  if (!ai) {
+    // Generate lovely mock response when API key is missing
+    const defaultTitles: Record<string, string> = {
+      gadgets: "【超高音質】JBL Tour Pro 2はスマートタッチ画面付きで驚愕の便利さ！徹底時短レビュー",
+      pc: "【爆速化】Samsung 990 PRO NVMe M.2 SSDでゲームロード時間が実質0秒になった件",
+      kitchen: "【極上の朝】バルミューダ The Toasterで焼く「奇跡のチーズトースト」を実体験レビュー",
+      beauty: "【自宅サロン級】リファ ビューテックドライヤープロで髪のツヤが劇的復活した秘密",
+      fashion: "【傑作】Coleman 大容量シールド35 バックパックを徹底レビュー！超防水かつ疲れない最高の相棒",
+      "books-games": "【神ゲー確定】エルデンリング(ELDEN RING)を100時間遊び尽くした完全攻略レビュー"
+    };
+
+    const targetTitle = userCustomTitle || defaultTitles[targetCategory] || "【超人気アイテム】話題のAmazon売れ筋商品をプロ目線で徹底レビュー";
+
+    return res.json({
+      id: "art_" + Math.random().toString(36).substring(2, 11),
+      title: targetTitle,
+      originalUrl: inputUrl || `https://www.amazon.co.jp/dp/${detectedAsin}`,
+      asin: detectedAsin,
+      category: targetCategory,
+      imageUrl: finalImg,
+      starRating: parseFloat((4.3 + Math.random() * 0.6).toFixed(1)),
+      introText: `今回ご紹介するのは、Amazonのセールランキングでも圧倒的上位を獲得している大注目製品です。実際に日々のQOL（生活の質）が爆発的に高まるかどうかを徹底的に使って検証しました。結論、迷っているなら今すぐ手に入れるべき価値があります！`,
+      features: [
+        "圧倒的な業界最高レベルのコストパフォーマンスと抜群の耐久設計",
+        "直感的で誰にでも分かりやすいスマートな操作感と極めて快適な装着・使用感",
+        "Amazonタイムセール祭りによる驚異的な最安値ポイント還元プログラム"
+      ],
+      pros: [
+        "使ったその日から違いを実感できる即効性、毎日のストレスが激減します",
+        "ミニマルでスタイリッシュな外観、お部屋や手元に美しく溶け込みます",
+        "カスタマーサポートも超丁寧で初期不良や保証ポリシーも完璧で安心"
+      ],
+      cons: [
+        "便利すぎて手放せなくなり、旅行中や外出先でも常に持ち歩きたくなる点",
+        "人気すぎて入荷待ちや在庫切れのスロットが度々発生すること"
+      ],
+      reviewBody: `${targetTitle}を実際に買ってよかったこと
+
+多くのインフルエンサーや辛口評論家が口を揃えて「これがベストバイ」と推奨するこの製品。私自身も「本当にそんなに凄いの？」と半信半疑でしたが、導入した瞬間にすべての悩みから解放されました。
+
+圧倒的な時短効果と圧倒的な機能美
+日々の生活リズムにおいて、1分1回の小さな億劫な手間が消えるのは想像以上の体験です。
+これまでは時間がかかっていたあの作業が、ボタンひとつ・スイッチを入れるだけで完了するストレスフリー。
+
+Amazonで買うからこそ最高の保証と即納スピード
+この製品を購入する際は、信頼性の観点からAmazonの公式ストア経由を第一に推奨します。お急ぎ便なら早ければ当日に到着し、もしもの初期不良でもワンタップで返品・新品交換が可能です。安心の保険だと思って下記のリンクをチェックしてみてください。`,
+      ctaTitle: "＼ 限定の特別ポイント還元中！Amazon最安値価格をチェック ／",
+      affiliateLink: finalAffLink,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      estimatedPV: Math.floor(Math.random() * 20) + 12,
+      clicks: 0,
+      earnings: 0,
+      aiModelUsed: "Gemini 3.5 Flash (Demo Mode)"
+    });
+  }
+
+  try {
+    const prompt = `
+【Amazon Affiliate Super-CTA Article Command】
+日本のアマゾンアフィリエイト商品の情報から、思わずユーザーが欲しくてクリックしたくなる圧倒的な「高コンバージョン（超高CTA）商品レビュー記事」を作成してください。
+
+ターゲット要素:
+- 元のリンク、または対象テキスト: "${inputUrl || "最新のベストセラー電子製品"}"
+- 与えられたユーザーの希望タイトル、またはキーワード: "${userCustomTitle || "なし"}"
+- 指定の商品カテゴリー: "${targetCategory}" (家電/パソコン/キッチン/ビューティー/ファッション/本・ゲームい等)
+- アソシエイトID(必ず最終リンクに組み込むこと): "${userTag}"
+- 自社アフィリエイトリンクURL (最終的な誘導先): "${finalAffLink}"
+
+【執筆アプローチ】
+1. 購買意欲を限界まで煽るタイトル（J-RATING誌、LDK誌、モノプロのようなプロの検証誌のような魅力的なもの）を考案。
+2. 特徴、実際に使って良かった点（メリット：3個）、購入前に知るべき注意点（デメリット：2個）、そして詳細なレビュー本文（見出し記号は一切使わず、読みやすい改行を多用した詳細なテキスト）を高熱量で書いてください。
+3. 信頼感を示すためのスター評価（4.0〜5.0の間）を選定してください。
+4. 最終的にリンクへと誘導するキャッチーな「CTA勧誘タイトル（CTAボタン用の文言）」を作成してください。
+
+※重要品質制限: 本文や特徴等のすべてのテキスト項目の中で、見出し文字(「#」「##」「###」等)や、アスタリスク(「*」)、コード用バックティック(「\`」)などのマークダウン特有のテキストフォーマット表現文字は【絶対に】使わないでください。見出し部分は単なる一行のプレーンなテキスト段落として記述してください。
+
+レスポンスは必ず以下のJSONスキーマに合わせてください（markdownブロックで囲わずJSON。日本語で記述してください）。
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
+Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
+You know how to convert raw product features into absolute life-changing experiences for the consumer.
+CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
+Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "思わず目が留まる魅力的な日本語記事タイトル" },
+            starRating: { type: Type.NUMBER, description: "製品への評価点数 (4.0から4.9までの小数)" },
+            introText: { type: Type.STRING, description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+            features: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+            },
+            pros: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
+            },
+            cons: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "正直に伝えるデメリットや留意点 2個"
+            },
+            reviewBody: { type: Type.STRING, description: "Markdownで整理された説得力の高い詳細レビュー本文" },
+            ctaTitle: { type: Type.STRING, description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
+          },
+          required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
+        }
+      }
+    });
+
+    const outputJson = JSON.parse(response.text?.trim() || "{}");
+
+    res.json({
+      id: "art_" + Math.random().toString(36).substring(2, 11),
+      title: outputJson.title || "【今こそ買い】話題のAmazonベストセラー徹底個別レビュー",
+      originalUrl: inputUrl || `https://www.amazon.co.jp/dp/${detectedAsin}`,
+      asin: detectedAsin,
+      category: targetCategory,
+      imageUrl: finalImg,
+      starRating: outputJson.starRating || 4.5,
+      introText: outputJson.introText || "QOLが向上するとネット上でバズっている大ヒット商品。その実力を本音で評価します。",
+      features: outputJson.features || ["高速動作", "長寿命設計", "ギフトにも最適"],
+      pros: outputJson.pros || ["毎日の作業から解放される", "頑丈で美しいフォルム", "コスト以上の多機能"],
+      cons: outputJson.cons || ["カラーバリエーションが少ないこと", "初期設定に少々時間が必要"],
+      reviewBody: outputJson.reviewBody || "### 確かな機能性。実際に日々使ってみての感想を共有します。",
+      ctaTitle: outputJson.ctaTitle || "＼ Amazonプライム対応。最速明日にお届け。現在の価格を見る ／",
+      affiliateLink: finalAffLink,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      estimatedPV: Math.floor(Math.random() * 5) + 5,
+      clicks: 0,
+      earnings: 0,
+      aiModelUsed: "Gemini 3.5 Flash"
+    });
+
+  } catch (error) {
+    console.error("AI Generation failed:", error);
+    res.status(500).json({ error: "AI記事作成プロセスに失敗しました。" });
+  }
+});
+
+// Start Express background listener
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+    console.log("Vite interactive asset stream initialized.");
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+    console.log("Amazon Go static production router configured.");
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server listening at port ${PORT}`);
+  });
+}
+
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
+

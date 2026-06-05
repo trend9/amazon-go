@@ -1,0 +1,6 @@
+{
+  "name": "あまぞん GO!!",
+  "description": "Amazonの商品情報やASINから客観的な詳細アフィリエイトレビュー記事を生成・管理する、スタイリッシュな商品選定レビューブログ・ホストシステム。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
