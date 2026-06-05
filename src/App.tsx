@@ -289,7 +289,7 @@ export default function App() {
       await loginWithGoogle();
     } catch (err: any) {
       console.error("Auth redirect failed:", err);
-      alert("Googleログイン認証の開始中にエラーが発生しました。");
+      alert(`Googleログイン認証の開始中にエラーが発生しました。\nエラーコード: ${err.code}\nエラーメッセージ: ${err.message}`);
     }
   };
 
