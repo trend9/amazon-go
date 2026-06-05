@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
   User
@@ -35,10 +35,11 @@ googleProvider.setCustomParameters({
 });
 
 /**
- * Sign in using Firebase Google Auth redirect.
+ * Sign in using Firebase Google Auth popup.
  */
-export async function loginWithGoogle(): Promise<void> {
-  await signInWithRedirect(auth, googleProvider);
+export async function loginWithGoogle(): Promise<User> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
 }
 
 /**

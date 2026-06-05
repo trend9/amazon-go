@@ -141,6 +141,9 @@ export default function App() {
   // Is Admin Route check
   const isAdminRoute = currentPath === '/host' || window.location.hash === '#/host' || window.location.search.includes('host');
 
+  // Authorized Admin check (Supports both legacy and new emails)
+  const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com' || authUser?.email === 'mattan0290c@gmail.com';
+
   // Push log function (only rendered on admin console panel)
   const pushLog = (message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -160,7 +163,7 @@ export default function App() {
       setAuthUser(user);
       setAuthLoading(false);
       if (user) {
-        if (user.email === 'mattan029@gmail.com') {
+        if (user.email === 'mattan029@gmail.com' || user.email === 'mattan0290c@gmail.com') {
           pushLog(`管理者 [${user.email}] が認証に成功しました。`, 'success');
         } else {
           pushLog(`認証完了アカウント: ${user.email} (アクセス権限なし)`, 'warn');
@@ -239,7 +242,6 @@ export default function App() {
       const payout = isClick ? Math.floor(Math.random() * 380) + 160 : 0;
 
       // Update in db if admin is logged in, else local
-      const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
       const updatedArticle = {
         ...targetArt,
         estimatedPV: targetArt.estimatedPV + viewsGained,
@@ -343,7 +345,6 @@ export default function App() {
       const freshArticle: AmazonProductArticle = await response.json();
 
       // Write to Firebase if authenticated admin
-      const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
       if (isAuthorizedAdmin) {
         await saveArticleToFirestore(freshArticle);
       }
@@ -403,7 +404,7 @@ export default function App() {
       if (!response.ok) throw new Error("Cron write failed");
       const freshArticle: AmazonProductArticle = await response.json();
 
-      const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
+      // Authorized check
       if (isAuthorizedAdmin) {
         await saveArticleToFirestore(freshArticle);
       }
@@ -425,7 +426,7 @@ export default function App() {
     if (!confirm(`「${titleStr}」のレビューをデータベースから削除しますか？`)) return;
 
     try {
-      const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
+      // Authorized check
       if (isAuthorizedAdmin) {
         await deleteArticleFromFirestore(id);
       }
@@ -448,7 +449,7 @@ export default function App() {
     if (!confirm("全ての記事カタログ、アソシエイト設定、成果ウォレットログを完全初期状態へリセットしますか？")) return;
 
     try {
-      const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
+      // Authorized check
       if (isAuthorizedAdmin) {
         // Delete all firestore articles first
         const currentList = isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles;
@@ -1085,7 +1086,7 @@ jobs:
                   Google 認証でサインイン
                 </button>
               </div>
-            ) : authUser.email !== 'mattan029@gmail.com' ? (
+            ) : !isAuthorizedAdmin ? (
               <div className="max-w-md mx-auto my-12 bg-zinc-950 border border-zinc-900 p-8 rounded-2xl text-center space-y-6">
                 <div className="space-y-2">
                   <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
