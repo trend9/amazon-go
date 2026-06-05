@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import fs from "fs";
+import firebaseConfig from "./firebase-applet-config.json";
 
 dotenv.config();
 
@@ -15,7 +16,6 @@ const PORT = 3000;
 app.use(express.json());
 
 // Initialize Firebase
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 

@@ -4,11 +4,9 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import firebaseConfig from './firebase-applet-config.json';
 
 dotenv.config();
-
-// Read firebase config
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
