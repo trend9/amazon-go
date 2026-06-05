@@ -463,10 +463,10 @@ export default function App() {
 
   // Total reset catalog to defaults
   const handleResetCatalog = async () => {
-    if (!confirm("全ての記事の成果データ（クリック数・報酬・閲覧数）を0にリセットしますか？")) return;
+    if (!confirm("全ての記事の成果データを0にリセットし、最新の正しいリンク（Sonyは短縮リンク、他は検索リンク）で初期記事を再配置しますか？")) return;
 
     try {
-      const cleanArticles = (isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles).map(art => ({
+      const cleanArticles = INITIAL_ARTICLES.map(art => ({
         ...art,
         clicks: 0,
         earnings: 0,
@@ -475,6 +475,11 @@ export default function App() {
 
       // Update in Firebase if authenticated admin
       if (isAuthorizedAdmin && isDbLoaded) {
+        // Delete all currently loaded dbArticles from Firestore first to clear the slate
+        for (const art of dbArticles) {
+          await deleteArticleFromFirestore(art.id);
+        }
+        // Save the correct seed articles
         for (const art of cleanArticles) {
           await saveArticleToFirestore(art);
         }
@@ -484,12 +489,12 @@ export default function App() {
         ...prev,
         articles: cleanArticles,
         systemLogs: [
-          { id: Math.random().toString(), timestamp: new Date().toLocaleTimeString(), message: "成果カウンターおよびアクセスログをすべて0に初期化リセットしました。", type: "info" }
+          { id: Math.random().toString(), timestamp: new Date().toLocaleTimeString(), message: "成果カウンターをリセットし、最新の正しい個別商品リンクで初期記事を再同期しました。", type: "info" }
         ],
         simulatedCronActive: false
       }));
       setSelectedArticleId(null);
-      pushLog("成果カウンターがリセットされました。", "success");
+      pushLog("成果カウンターと初期レビュー記事が正常に再配置されました。", "success");
     } catch (err) {
       console.error(err);
       alert("カウンターのリセット中にエラーが発生しました。");
@@ -1382,10 +1387,24 @@ jobs:
                               const v = e.target.value.trim() || 'mattan0290c-22';
                               // Update local config
                               setState(p => {
-                                const updated = p.articles.map(art => ({
-                                  ...art,
-                                  affiliateLink: `https://www.amazon.co.jp/dp/${art.asin}?tag=${v}`
-                                }));
+                                const updated = p.articles.map(art => {
+                                  if (art.affiliateLink.includes('amzn.to')) {
+                                    return art;
+                                  }
+                                  if (art.affiliateLink.includes('/s?k=')) {
+                                    const baseUrl = art.affiliateLink.split('?')[0];
+                                    const params = new URLSearchParams(art.affiliateLink.split('?')[1] || '');
+                                    params.set('tag', v);
+                                    return {
+                                      ...art,
+                                      affiliateLink: `${baseUrl}?${params.toString()}`
+                                    };
+                                  }
+                                  return {
+                                    ...art,
+                                    affiliateLink: `https://www.amazon.co.jp/dp/${art.asin}/ref=nosim?tag=${v}`
+                                  };
+                                });
                                 return { ...p, associateId: v, articles: updated };
                               });
                               // Save to database

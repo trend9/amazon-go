@@ -93,7 +93,7 @@ AI技術を用いた通話補正アルゴリズムにより、騒がしいスタ
   {
     id: 'art-keyboard-hhkb',
     title: '【極限の打鍵感】Happy Hacking Keyboard (HHKB) Professional HYBRID Type-Sを愛でる。プロがこのキーボードから離れられない理由',
-    originalUrl: 'https://www.amazon.co.jp/dp/B082TFTZCS',
+    originalUrl: 'https://www.amazon.co.jp/s?k=HHKB+HYBRID+Type-S',
     asin: 'B082TFTZCS',
     category: 'pc',
     imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=600',
@@ -124,7 +124,7 @@ HHKB HYBRID Type-Sは、**「タイピングという行為そのものをエン
 #### 💻 デスクがすっきり片付く超ミニマル設計
 無駄な余白を完璧にカットした極限コンパクト。マウスとの距離が圧倒的に近くなり、腕の疲れを大幅に削減します。持ち運びやすさも抜群で、カフェやコワーキングスペース、自宅すべてを同一の入力環境へとシームレスに変更できます。`,
     ctaTitle: '＼ 高ポイント還元キャンペーン実施中！今すぐAmazonで在庫を見る ＼',
-    affiliateLink: 'https://www.amazon.co.jp/dp/B082TFTZCS/ref=nosim?tag=mattan0290c-22',
+    affiliateLink: 'https://www.amazon.co.jp/s?k=HHKB+HYBRID+Type-S&tag=mattan0290c-22',
     createdAt: '2026-06-05 01:12:40',
     estimatedPV: 0,
     clicks: 0,
@@ -134,7 +134,7 @@ HHKB HYBRID Type-Sは、**「タイピングという行為そのものをエン
   {
     id: 'art-cooker-hotcook',
     title: '【時短革命】シャープ ヘルシオ ホットクック KN-HW24Gを3ヶ月使って分かったメリット・デメリット！「材料を切って入れるだけ」の魔法',
-    originalUrl: 'https://www.amazon.co.jp/dp/B09CGLH7PP',
+    originalUrl: 'https://www.amazon.co.jp/s?k=%E3%83%9B%E3%83%83%E3%83%88%E3%82%AF%E3%83%83%E3%82%AF+KN-HW24G',
     asin: 'B09CGLH7PP',
     category: 'kitchen',
     imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=600',
@@ -165,7 +165,7 @@ HHKB HYBRID Type-Sは、**「タイピングという行為そのものをエン
 #### 2. 無水調理が引き出す、調味料パウダー半分の極上料理
 本当にトマトとタマネギだけで、ルー不要に近い濃厚絶品無水カレーが仕上がります。健康的かつプロ顔負けのコクが味わえるため、外食の頻度が激減し、結果的にお財布にも体に優しい生活になります。`,
     ctaTitle: '＼ 超優良ライフチェンジ調理器具。Amazonのタイムセール特価と評価を確認する ／',
-    affiliateLink: 'https://www.amazon.co.jp/dp/B09CGLH7PP/ref=nosim?tag=mattan0290c-22',
+    affiliateLink: 'https://www.amazon.co.jp/s?k=%E3%83%9B%E3%83%83%E3%83%88%E3%82%AF%E3%83%83%E3%82%AF+KN-HW24G&tag=mattan0290c-22',
     createdAt: '2026-06-04 18:30:15',
     estimatedPV: 0,
     clicks: 0,
