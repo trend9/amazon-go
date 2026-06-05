@@ -288,8 +288,8 @@ export default function App() {
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      console.error("Auth popup failed:", err);
-      alert("Googleログイン認証中にエラーが発生しました。ポップアップブロック等を確認してください。");
+      console.error("Auth redirect failed:", err);
+      alert("Googleログイン認証の開始中にエラーが発生しました。");
     }
   };
 
