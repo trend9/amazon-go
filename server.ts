@@ -116,7 +116,96 @@ async function getLwaAccessToken(): Promise<string | null> {
   }
 }
 
-// 2. High-Performance Review Generator API
+// 2. Dynamic Product Details Fetcher API for Banners
+app.get("/api/amazon-products", async (req, res) => {
+  const asinsParam = req.query.asins as string;
+  const tag = (req.query.tag as string) || "mattan0290c-22";
+  if (!asinsParam) {
+    return res.status(400).json({ error: "ASINs parameter is required." });
+  }
+
+  const asins = asinsParam.split(",");
+  const results = [];
+
+  const defaultDetails: Record<string, { name: string; price: string; img: string }> = {
+    "B0CL7Y437Z": {
+      name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
+      price: "¥9,980",
+      img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250"
+    },
+    "B0CGDGN41Y": {
+      name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
+      price: "¥5,990",
+      img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250"
+    },
+    "B0CHX58W9G": {
+      name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
+      price: "¥39,800",
+      img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250"
+    },
+    "B0BTMG5N5G": {
+      name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
+      price: "¥8,980",
+      img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250"
+    }
+  };
+
+  try {
+    const token = await getLwaAccessToken();
+    for (const asin of asins) {
+      let productData = {
+        asin,
+        name: defaultDetails[asin]?.name || "Amazon製品",
+        price: defaultDetails[asin]?.price || "オープン価格",
+        img: defaultDetails[asin]?.img || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=250",
+        affiliateLink: `https://www.amazon.co.jp/dp/${asin}/ref=nosim?tag=${tag}`,
+        label: asin === "B0CL7Y437Z" ? "ベストセラー1位" : (asin === "B0CGDGN41Y" ? "セール中" : (asin === "B0CHX58W9G" ? "人気急上昇" : "QOL向上定番"))
+      };
+
+      if (token) {
+        try {
+          const apiRes = await fetch(`https://api.amazon.co.jp/creators/v1/items/${asin}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/json"
+            }
+          });
+          if (apiRes.ok) {
+            const data: any = await apiRes.json();
+            if (data.title) productData.name = data.title;
+            
+            if (data.imageUrl) {
+              productData.img = data.imageUrl;
+            } else if (data.image && data.image.url) {
+              productData.img = data.image.url;
+            } else if (data.images && data.images[0]) {
+              productData.img = typeof data.images[0] === 'string' ? data.images[0] : (data.images[0].url || productData.img);
+            }
+            
+            if (data.price) {
+              productData.price = data.price;
+            } else if (data.formattedPrice) {
+              productData.price = data.formattedPrice;
+            }
+            
+            if (data.buyUrl) {
+              productData.affiliateLink = data.buyUrl.includes('?') ? `${data.buyUrl}&tag=${tag}` : `${data.buyUrl}?tag=${tag}`;
+            }
+          }
+        } catch (innerErr) {
+          console.warn(`Error fetching details for ASIN ${asin} from Creators API:`, innerErr);
+        }
+      }
+      results.push(productData);
+    }
+  } catch (err) {
+    console.error("Endpoint /api/amazon-products failed:", err);
+  }
+
+  res.json(results);
+});
+
+// 3. High-Performance Review Generator API
 app.post("/api/generate-amazon-review", async (req, res) => {
   const { inputUrl, category, associateId, userCustomTitle, customAffiliateLink } = req.body;
 
@@ -180,7 +269,7 @@ app.post("/api/generate-amazon-review", async (req, res) => {
     console.warn("Amazon API fetch failed or was skipped:", apiErr);
   }
 
-  let finalImg = selectProductMockImage(targetCategory, userCustomTitle || detectedAsin);
+  let finalImg = selectProductMockImage(targetCategory, userCustomTitle || searchKeyword || inputUrl || detectedAsin || "product");
 
   if (!ai) {
     // Generate lovely mock response when API key is missing
@@ -244,7 +333,7 @@ Amazonで買うからこそ最高の保証と即納スピード
 日本のアマゾンアフィリエイト商品の情報から、思わずユーザーが欲しくてクリックしたくなる圧倒的な「高コンバージョン（超高CTA）商品レビュー記事」を作成してください。
 
 ターゲット要素:
-- 元のリンク、または対象テキスト: "${inputUrl || "最新のベストセラー電子製品"}"
+- 対象商品名または検索キーワード: "${inputUrl || "最新のベストセラー電子製品"}"
 - 与えられたユーザーの希望タイトル、またはキーワード: "${userCustomTitle || "なし"}"
 - 指定の商品カテゴリー: "${targetCategory}" (家電/パソコン/キッチン/ビューティー/ファッション/本・ゲームい等)
 - アソシエイトID(必ず最終リンクに組み込むこと): "${userTag}"

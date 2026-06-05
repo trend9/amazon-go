@@ -139,6 +139,59 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const [bannerProducts, setBannerProducts] = useState<any[]>([
+    {
+      asin: "B0CL7Y437Z",
+      name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
+      price: "¥9,980",
+      img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250",
+      label: "ベストセラー1位",
+      affiliateLink: `https://www.amazon.co.jp/dp/B0CL7Y437Z/ref=nosim?tag=${state.associateId}`
+    },
+    {
+      asin: "B0CGDGN41Y",
+      name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
+      price: "¥5,990",
+      img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250",
+      label: "セール中",
+      affiliateLink: `https://www.amazon.co.jp/dp/B0CGDGN41Y/ref=nosim?tag=${state.associateId}`
+    },
+    {
+      asin: "B0CHX58W9G",
+      name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
+      price: "¥39,800",
+      img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250",
+      label: "人気急上昇",
+      affiliateLink: `https://www.amazon.co.jp/dp/B0CHX58W9G/ref=nosim?tag=${state.associateId}`
+    },
+    {
+      asin: "B0BTMG5N5G",
+      name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
+      price: "¥8,980",
+      img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250",
+      label: "QOL向上定番",
+      affiliateLink: `https://www.amazon.co.jp/dp/B0BTMG5N5G/ref=nosim?tag=${state.associateId}`
+    }
+  ]);
+
+  useEffect(() => {
+    const fetchBannerProducts = async () => {
+      try {
+        const asins = "B0CL7Y437Z,B0CGDGN41Y,B0CHX58W9G,B0BTMG5N5G";
+        const response = await fetch(`/api/amazon-products?asins=${asins}&tag=${state.associateId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setBannerProducts(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch banner products details from API, using defaults:", err);
+      }
+    };
+    fetchBannerProducts();
+  }, [state.associateId]);
+
   // Is Admin Route check
   const isAdminRoute = currentPath === '/host' || window.location.hash === '#/host' || window.location.search.includes('host');
 
@@ -277,8 +330,8 @@ export default function App() {
     e.preventDefault();
     if (generationLoading) return;
 
-    if (!inputUrl.trim() && !customTitle.trim()) {
-      alert("Amazonの製品URL、ASINコード、またはキーワードを入力してください。");
+    if (!inputUrl.trim() || !customAffiliateLink.trim()) {
+      alert("商品名（製品キーワード）とアフィリエイトリンクはどちらも必須入力です。");
       return;
     }
 
@@ -1227,13 +1280,13 @@ jobs:
 
                         <div className="space-y-1.5">
                           <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
-                            Amazon 製品URL または 10桁のASIN識別子
+                            商品名・製品キーワード（必須）
                           </label>
                           <input
                             type="text"
                             value={inputUrl}
                             onChange={(e) => setInputUrl(e.target.value)}
-                            placeholder="例: B09Y29G7B2 もしくは 製品個別URLを入力"
+                            placeholder="例: Sony WH-1000XM5"
                             className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
                           />
                         </div>
@@ -1272,13 +1325,13 @@ jobs:
 
                         <div className="space-y-1.5">
                           <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
-                            カスタム・アフィリエイトリンク（任意 - アソシエイト・ツールバー作成リンクなど）
+                            アフィリエイトリンク / 短縮URL（必須）
                           </label>
                           <input
                             type="text"
                             value={customAffiliateLink}
                             onChange={(e) => setCustomAffiliateLink(e.target.value)}
-                            placeholder="例: https://amzn.to/xxxxxx などを直接指定すると、優先的にそのリンクが使用されます"
+                            placeholder="例: https://amzn.to/4fZYn2T"
                             className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
                           />
                         </div>
@@ -1504,39 +1557,10 @@ jobs:
 
             {/* Desktop View: 1 Row, 4 Columns Grid */}
             <div className="hidden md:grid grid-cols-4 gap-4">
-              {[
-                {
-                  asin: "B0CL7Y437Z",
-                  name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
-                  price: "¥9,980",
-                  img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250",
-                  label: "ベストセラー1位"
-                },
-                {
-                  asin: "B0CGDGN41Y",
-                  name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
-                  price: "¥5,990",
-                  img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250",
-                  label: "セール中"
-                },
-                {
-                  asin: "B0CHX58W9G",
-                  name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
-                  price: "¥39,800",
-                  img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250",
-                  label: "人気急上昇"
-                },
-                {
-                  asin: "B0BTMG5N5G",
-                  name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
-                  price: "¥8,980",
-                  img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250",
-                  label: "QOL向上定番"
-                }
-              ].map((prod, idx) => (
+              {bannerProducts.map((prod, idx) => (
                 <a
                   key={idx}
-                  href={`https://www.amazon.co.jp/dp/${prod.asin}/ref=nosim?tag=${state.associateId}`}
+                  href={prod.affiliateLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-zinc-950 border border-zinc-900 rounded-xl p-3.5 flex flex-col justify-between hover:border-orange-500/40 hover:scale-[1.02] transition-all group cursor-pointer text-left"
@@ -1564,29 +1588,31 @@ jobs:
 
             {/* Mobile View: Slim Horizontal 1 Row, 1 Column Banner at the bottom */}
             <div className="md:hidden block">
-              <a
-                href={`https://www.amazon.co.jp/gp/bestsellers/?tag=${state.associateId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-zinc-950 border border-zinc-900 hover:border-orange-500/40 rounded-xl p-3 flex items-center justify-between gap-3 cursor-pointer text-left transition-all active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
-                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=150" className="w-full h-full object-cover" alt="タイムセール" />
-                    <span className="absolute top-0.5 left-0.5 text-[6px] bg-amber-500 text-black font-extrabold px-1 rounded">HOT</span>
+              {bannerProducts.length > 0 && (
+                <a
+                  href={bannerProducts[0].affiliateLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-zinc-950 border border-zinc-900 hover:border-orange-500/40 rounded-xl p-3 flex items-center justify-between gap-3 cursor-pointer text-left transition-all active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
+                      <img src={bannerProducts[0].img} className="w-full h-full object-cover" alt={bannerProducts[0].name} />
+                      <span className="absolute top-0.5 left-0.5 text-[6px] bg-amber-500 text-black font-extrabold px-1 rounded">HOT</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[8px] text-orange-400 font-black uppercase tracking-wider block">{bannerProducts[0].label || "タイムセール"}</span>
+                      <h5 className="text-[10px] font-bold text-zinc-300 truncate leading-normal">
+                        {bannerProducts[0].name}
+                      </h5>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-[8px] text-orange-400 font-black uppercase tracking-wider block">タイムセール祭り開催中</span>
-                    <h5 className="text-[10px] font-bold text-zinc-300 truncate leading-normal">
-                      本日売れ筋のガジェット・周辺機器ランキング特価情報をチェック！
-                    </h5>
-                  </div>
-                </div>
-                <span className="text-[9px] bg-orange-500 text-black font-black px-2.5 py-1.5 rounded-lg flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap">
-                  セールを見る
-                  <ArrowUpRight className="w-2.5 h-2.5" />
-                </span>
-              </a>
+                  <span className="text-[9px] bg-orange-500 text-black font-black px-2.5 py-1.5 rounded-lg flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap">
+                    セールを見る
+                    <ArrowUpRight className="w-2.5 h-2.5" />
+                  </span>
+                </a>
+              )}
             </div>
           </div>
         )}
