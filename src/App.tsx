@@ -146,33 +146,33 @@ export default function App() {
       asin: "B0CL7Y437Z",
       name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
       price: "¥9,980",
-      img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250",
+      img: "https://picsum.photos/seed/firetv/300/200",
       label: "ベストセラー1位",
-      affiliateLink: `https://www.amazon.co.jp/dp/B0CL7Y437Z/ref=nosim?tag=${state.associateId}`
+      affiliateLink: `https://www.amazon.co.jp/s?k=Fire+TV+Stick+4K&tag=${state.associateId}`
     },
     {
       asin: "B0CGDGN41Y",
       name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
       price: "¥5,990",
-      img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250",
+      img: "https://picsum.photos/seed/anker/300/200",
       label: "セール中",
-      affiliateLink: `https://www.amazon.co.jp/dp/B0CGDGN41Y/ref=nosim?tag=${state.associateId}`
+      affiliateLink: `https://www.amazon.co.jp/s?k=Anker+PowerBank+10000mAh&tag=${state.associateId}`
     },
     {
       asin: "B0CHX58W9G",
       name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
       price: "¥39,800",
-      img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250",
+      img: "https://picsum.photos/seed/airpods/300/200",
       label: "人気急上昇",
-      affiliateLink: `https://www.amazon.co.jp/dp/B0CHX58W9G/ref=nosim?tag=${state.associateId}`
+      affiliateLink: `https://www.amazon.co.jp/s?k=AirPods+Pro&tag=${state.associateId}`
     },
     {
       asin: "B0BTMG5N5G",
       name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
       price: "¥8,980",
-      img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250",
+      img: "https://picsum.photos/seed/switchbot/300/200",
       label: "QOL向上定番",
-      affiliateLink: `https://www.amazon.co.jp/dp/B0BTMG5N5G/ref=nosim?tag=${state.associateId}`
+      affiliateLink: `https://www.amazon.co.jp/s?k=SwitchBot+%E3%83%8F%E3%83%962&tag=${state.associateId}`
     }
   ]);
 

@@ -131,34 +131,41 @@ app.get("/api/amazon-products", async (req, res) => {
     "B0CL7Y437Z": {
       name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
       price: "¥9,980",
-      img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250"
+      img: "https://picsum.photos/seed/firetv/300/200"
     },
     "B0CGDGN41Y": {
       name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
       price: "¥5,990",
-      img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250"
+      img: "https://picsum.photos/seed/anker/300/200"
     },
     "B0CHX58W9G": {
       name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
       price: "¥39,800",
-      img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250"
+      img: "https://picsum.photos/seed/airpods/300/200"
     },
     "B0BTMG5N5G": {
       name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
       price: "¥8,980",
-      img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250"
+      img: "https://picsum.photos/seed/switchbot/300/200"
     }
   };
 
   try {
     const token = await getLwaAccessToken();
     for (const asin of asins) {
+      const searchTerms: Record<string, string> = {
+        "B0CL7Y437Z": "Fire TV Stick 4K",
+        "B0CGDGN41Y": "Anker PowerBank 10000mAh",
+        "B0CHX58W9G": "AirPods Pro",
+        "B0BTMG5N5G": "SwitchBot ハブ2"
+      };
+      const term = searchTerms[asin] || "Amazon売れ筋";
       let productData = {
         asin,
         name: defaultDetails[asin]?.name || "Amazon製品",
         price: defaultDetails[asin]?.price || "オープン価格",
         img: defaultDetails[asin]?.img || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=250",
-        affiliateLink: `https://www.amazon.co.jp/dp/${asin}/ref=nosim?tag=${tag}`,
+        affiliateLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(term)}&tag=${tag}`,
         label: asin === "B0CL7Y437Z" ? "ベストセラー1位" : (asin === "B0CGDGN41Y" ? "セール中" : (asin === "B0CHX58W9G" ? "人気急上昇" : "QOL向上定番"))
       };
 
