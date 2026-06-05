@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -284,28 +284,28 @@ CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', o
 Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`,
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            title: { type: Type.STRING, description: "思わず目が留まる魅力的な日本語記事タイトル" },
-            starRating: { type: Type.NUMBER, description: "製品への評価点数 (4.0から4.9までの小数)" },
-            introText: { type: Type.STRING, description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+            title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
+            starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
+            introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
             features: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
             },
             pros: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
             },
             cons: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "正直に伝えるデメリットや留意点 2個"
             },
-            reviewBody: { type: Type.STRING, description: "Markdownで整理された説得力の高い詳細レビュー本文" },
-            ctaTitle: { type: Type.STRING, description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
+            reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
+            ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
           },
           required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
         }
