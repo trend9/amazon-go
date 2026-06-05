@@ -703,7 +703,12 @@ jobs:
 
             <div className="flex flex-wrap items-center gap-3">
               <div
-                onClick={() => navigateTo('/')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setState(prev => ({ ...prev, activeCategorySlug: 'all' }));
+                  setSelectedArticleId(null);
+                  navigateTo('/');
+                }}
                 className="bg-zinc-900 text-amber-500 border border-zinc-800/80 font-black text-xl sm:text-2xl md:text-3xl px-3.5 py-1 rounded-lg tracking-tighter flex items-center gap-1.5 hover:border-amber-500/40 cursor-pointer shadow-inner transition-all"
               >
                 あまぞん GO!!

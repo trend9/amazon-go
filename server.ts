@@ -358,7 +358,7 @@ Amazonで買うからこそ最高の保証と即納スピード
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
