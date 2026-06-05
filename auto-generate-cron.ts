@@ -270,7 +270,7 @@ async function run() {
             name: item.name,
             price: item.price,
             img: item.img,
-            affiliateLink: `https://www.amazon.co.jp/dp/${item.asin}?tag=${tag}`,
+            affiliateLink: `https://www.amazon.co.jp/dp/${item.asin}/ref=nosim?tag=${tag}`,
             category: cat
           });
           itemsAddedForCat++;

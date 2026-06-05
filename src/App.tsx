@@ -372,7 +372,7 @@ export default function App() {
     setQueueLoading(true);
     try {
       const resolvedAsin = queueAsin.trim().toUpperCase();
-      const resolvedLink = queueAffiliateLink.trim() || `https://www.amazon.co.jp/dp/${resolvedAsin}?tag=${state.associateId}`;
+      const resolvedLink = queueAffiliateLink.trim() || `https://www.amazon.co.jp/dp/${resolvedAsin}/ref=nosim?tag=${state.associateId}`;
       const resolvedPrice = queuePrice.trim() || "オープン価格";
       const resolvedImg = queueImg.trim() || `https://picsum.photos/seed/${resolvedAsin}/400/300`;
 
