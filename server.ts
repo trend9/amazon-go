@@ -3,6 +3,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+import fs from "fs";
 
 dotenv.config();
 
@@ -11,16 +14,33 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Initialize server-side Gemini 3.5 client
+// Initialize Firebase
+const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+
+async function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
+  try {
+    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const timestamp = new Date().toLocaleTimeString();
+    await setDoc(doc(db, 'system_logs', id), {
+      id,
+      timestamp,
+      message,
+      type,
+      createdAt: new Date().toISOString()
+    });
+    console.log(`[${type.toUpperCase()}] ${message}`);
+  } catch (err) {
+    console.error("Failed to write log to Firestore:", err);
+  }
+}
+
+// Initialize server-side Gemini client
 let ai: GoogleGenAI | null = null;
 if (process.env.GEMINI_API_KEY) {
   ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      }
-    }
+    apiKey: process.env.GEMINI_API_KEY
   });
   console.log("Amazon GO AI: Gemini API initialized successfully.");
 } else {
@@ -440,9 +460,13 @@ Always output your entire response formatted as a strict single JSON object foll
       aiModelUsed: `Gemini ${successModel === 'gemini-1.5-flash' ? '1.5' : successModel === 'gemini-2.0-flash' ? '2.0' : '2.5'} Flash`
     });
 
+    await pushLog(`AI review writer success: "${outputJson.title || 'Untitled'}" using ${successModel}`, "success");
+
   } catch (error: any) {
     console.error("AI Generation failed:", error);
-    res.status(500).json({ error: `AI記事作成プロセスに失敗しました。詳細: ${error.message || error}` });
+    const errorMsg = error.message || String(error);
+    await pushLog(`AI Generation failed. Details: ${errorMsg}`, "warn");
+    res.status(500).json({ error: `AI記事作成プロセスに失敗しました。詳細: ${errorMsg}` });
   }
 });
 
