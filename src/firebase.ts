@@ -17,6 +17,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  limit,
   onSnapshot
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -168,5 +169,41 @@ export function subscribeToSettings(
     }
   }, (err) => {
     console.warn('Config subscription read error (using local state fallback):', err);
+  });
+}
+
+/**
+ * Saves a system log to Firestore system_logs collection.
+ */
+export async function saveLogToFirestore(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info'): Promise<void> {
+  try {
+    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const timestamp = new Date().toLocaleTimeString();
+    await setDoc(doc(db, 'system_logs', id), {
+      id,
+      timestamp,
+      message,
+      type,
+      createdAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.warn('Failed to save log to Firestore:', err);
+  }
+}
+
+/**
+ * Subscribes to system logs in Firestore, limited to the 30 most recent logs.
+ */
+export function subscribeToLogs(onUpdate: (logs: any[]) => void) {
+  const logsCol = collection(db, 'system_logs');
+  const q = query(logsCol, orderBy('createdAt', 'desc'), limit(30));
+  return onSnapshot(q, (snapshot) => {
+    const logsList: any[] = [];
+    snapshot.forEach((docSnap) => {
+      logsList.push(docSnap.data());
+    });
+    onUpdate(logsList);
+  }, (err) => {
+    console.warn('System logs subscription error:', err);
   });
 }

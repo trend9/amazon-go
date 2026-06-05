@@ -18,5 +18,15 @@ service cloud.firestore {
       allow read: if true;
       allow write, delete: if isAdmin();
     }
+
+    // Stock products collection for cron replenishment (needs unauthenticated read/write)
+    match /stock_products/{prodId} {
+      allow read, write: if true;
+    }
+
+    // System logs collection for shared administration console synchronization
+    match /system_logs/{logId} {
+      allow read, write: if true;
+    }
   }
 }

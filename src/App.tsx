@@ -41,7 +41,9 @@ import {
   deleteArticleFromFirestore,
   subscribeToSettings,
   saveSettingsToFirestore,
-  clearStockProductsInFirestore
+  clearStockProductsInFirestore,
+  saveLogToFirestore,
+  subscribeToLogs
 } from './firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 
@@ -203,14 +205,7 @@ export default function App() {
 
   // Push log function (only rendered on admin console panel)
   const pushLog = (message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') => {
-    const timestamp = new Date().toLocaleTimeString();
-    setState(prev => {
-      const nextLogs = [
-        { id: Math.random().toString(), timestamp, message, type },
-        ...prev.systemLogs.slice(0, 29)
-      ];
-      return { ...prev, systemLogs: nextLogs };
-    });
+    saveLogToFirestore(message, type);
   };
 
   // Initial Seed & Auth Subscription & Firestore Subscription
@@ -260,16 +255,19 @@ export default function App() {
       }));
     });
 
-    // Seed introductory log
-    if (state.systemLogs.length === 0) {
-      pushLog("あまぞん GO!! 管理セキュアエンジン起動完了。", "success");
-      pushLog("Google Gemini 3.5 AIアフィリエイトプロセッサー通信確立済み。", "ai");
-    }
+    // 5. Real-time System Logs subscription
+    const unsubscribeLogs = subscribeToLogs((logs) => {
+      setState(prev => ({
+        ...prev,
+        systemLogs: logs
+      }));
+    });
 
     return () => {
       unsubscribeAuth();
       unsubscribeArticles();
       unsubscribeSettings();
+      unsubscribeLogs();
     };
   }, []);
 

@@ -357,44 +357,64 @@ Amazonで買うからこそ最高の保証と即納スピード
 レスポンスは必ず以下のJSONスキーマに合わせてください（markdownブロックで囲わずJSON。日本語で記述してください）。
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
+    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
+    let response: any = null;
+    let successModel = "";
+    let lastError: any = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Attempting content generation with model: ${modelName}...`);
+        response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
 Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
 You know how to convert raw product features into absolute life-changing experiences for the consumer.
 CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
 Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
-            starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
-            introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
-            features: {
-              type: "array",
-              items: { type: "string" },
-              description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
+                starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
+                introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+                features: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+                },
+                pros: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
+                },
+                cons: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "正直に伝えるデメリットや留意点 2個"
             },
-            pros: {
-              type: "array",
-              items: { type: "string" },
-              description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
-            },
-            cons: {
-              type: "array",
-              items: { type: "string" },
-              description: "正直に伝えるデメリットや留意点 2個"
-            },
-            reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
-            ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
-          },
-          required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
-        }
+                reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
+                ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
+              },
+              required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
+            }
+          }
+        });
+        successModel = modelName;
+        console.log(`AI Generation succeeded with model: ${modelName}`);
+        break;
+      } catch (err) {
+        console.error(`AI Generation failed with model ${modelName}:`, err);
+        lastError = err;
       }
-    });
+    }
+
+    if (!response) {
+      throw lastError || new Error("All models failed to generate content");
+    }
 
     const outputJson = JSON.parse(response.text?.trim() || "{}");
 
@@ -417,7 +437,7 @@ Always output your entire response formatted as a strict single JSON object foll
       estimatedPV: Math.floor(Math.random() * 5) + 5,
       clicks: 0,
       earnings: 0,
-      aiModelUsed: "Gemini 3.5 Flash"
+      aiModelUsed: `Gemini ${successModel === 'gemini-1.5-flash' ? '1.5' : successModel === 'gemini-2.0-flash' ? '2.0' : '2.5'} Flash`
     });
 
   } catch (error: any) {

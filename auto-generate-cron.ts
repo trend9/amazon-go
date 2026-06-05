@@ -123,8 +123,25 @@ async function getLwaAccessToken(): Promise<string | null> {
   }
 }
 
+async function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
+  try {
+    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const timestamp = new Date().toLocaleTimeString();
+    await setDoc(doc(db, 'system_logs', id), {
+      id,
+      timestamp,
+      message,
+      type,
+      createdAt: new Date().toISOString()
+    });
+    console.log(`[${type.toUpperCase()}] ${message}`);
+  } catch (err) {
+    console.error("Failed to write log to Firestore:", err);
+  }
+}
+
 async function run() {
-  console.log("Starting automated review stock & auto-generation pipeline...");
+  await pushLog("Starting automated review stock & auto-generation pipeline...", "info");
 
   try {
     const tag = process.env.AMAZON_ASSOCIATE_ID || "mattan0290c-22";
@@ -147,11 +164,11 @@ async function run() {
       if (d.data().asin) existingAsinsAndKeywords.add(d.data().asin.toLowerCase());
     });
 
-    console.log(`Current stock size: ${stockSnap.size}. Articles size: ${articlesSnap.size}.`);
+    await pushLog(`Current stock size: ${stockSnap.size}. Articles size: ${articlesSnap.size}.`, "info");
 
     // 2. Refill Stock if count is less than 24
     if (stockSnap.size < 24) {
-      console.log(`Stock level is low (${stockSnap.size}/24). Initiating stock refill pipeline for 50 items...`);
+      await pushLog(`Stock level is low (${stockSnap.size}/24). Initiating stock refill pipeline for 50 items...`, "info");
 
       const refillPool: { asin: string; name: string; price: string; img: string; affiliateLink: string; category: string }[] = [];
       const token = await getLwaAccessToken();
@@ -196,7 +213,7 @@ async function run() {
                   if (firstItem.price) resolvedPrice = firstItem.price;
                   if (firstItem.imageUrl) resolvedImg = firstItem.imageUrl;
                   if (firstItem.buyUrl) resolvedLink = firstItem.buyUrl;
-                  console.log(`API Resolution Success: ${resolvedName} (${resolvedAsin})`);
+                  await pushLog(`API Resolution Success: ${resolvedName} (${resolvedAsin})`, "success");
                 }
               }
             } catch (apiErr) {
@@ -220,7 +237,7 @@ async function run() {
         }
       }
 
-      console.log(`Refilling ${refillPool.length} products to stock_products collection...`);
+      await pushLog(`Refilling ${refillPool.length} products to stock_products collection...`, "info");
       for (const prod of refillPool) {
         await setDoc(doc(db, 'stock_products', prod.asin), {
           asin: prod.asin,
@@ -240,7 +257,7 @@ async function run() {
 
     // 3. Dispatch one item from stock to generate review
     if (stockSnap.size === 0 && stockSnap.docs.length === 0) {
-      console.log("No items available in stock to generate review.");
+      await pushLog("No items available in stock to generate review.", "warn");
       return;
     }
 
@@ -248,9 +265,9 @@ async function run() {
     const dispatchDoc = stockSnap.docs[0];
     const dispatchProduct = dispatchDoc.data();
 
-    console.log(`Dispatching product from stock for hourly review: "${dispatchProduct.name}" (${dispatchProduct.asin})`);
+    await pushLog(`Dispatching product from stock for hourly review: "${dispatchProduct.name}" (${dispatchProduct.asin})`, "info");
 
-    // 4. Generate review using Gemini 2.5 Flash
+    // 4. Generate review using Gemini
     const prompt = `
 【Amazon Affiliate Super-CTA Article Command】
 日本のアマゾンアフィリエイト商品の情報から、思わずユーザーが欲しくてクリックしたくなる圧倒的な「高コンバージョン（超高CTA）商品レビュー記事」を作成してください。
@@ -273,44 +290,64 @@ async function run() {
 レスポンスは必ず以下のJSONスキーマに合わせてください（markdownブロックで囲わずJSON。日本語で記述してください）。
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
+    const modelsToTry = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
+    let response: any = null;
+    let successModel = "";
+    let lastError: any = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        await pushLog(`Attempting review generation with model: ${modelName}...`, "ai");
+        response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            systemInstruction: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
 Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
 You know how to convert raw product features into absolute life-changing experiences for the consumer.
 CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
 Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
-            starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
-            introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
-            features: {
-              type: "array",
-              items: { type: "string" },
-              description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
-            },
-            pros: {
-              type: "array",
-              items: { type: "string" },
-              description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
-            },
-            cons: {
-              type: "array",
-              items: { type: "string" },
-              description: "正直に伝えるデメリットや留意点 2個"
-            },
-            reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
-            ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
-          },
-          required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
-        }
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "思わず目が留まる魅力的な日本語記事タイトル" },
+                starRating: { type: "number", description: "製品への評価点数 (4.0から4.9までの小数)" },
+                introText: { type: "string", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+                features: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+                },
+                pros: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "実際に手に入れて得られる強烈なメリット・良い点 3個"
+                },
+                cons: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "正直に伝えるデメリットや留意点 2個"
+                },
+                reviewBody: { type: "string", description: "Markdownで整理された説得力の高い詳細レビュー本文" },
+                ctaTitle: { type: "string", description: "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内" }
+              },
+              required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
+            }
+          }
+        });
+        successModel = modelName;
+        await pushLog(`AI Generation succeeded with model: ${modelName}`, "success");
+        break;
+      } catch (err) {
+        await pushLog(`AI Generation failed with model ${modelName}: ${err.message || err}`, "warn");
+        lastError = err;
       }
-    });
+    }
+
+    if (!response) {
+      throw lastError || new Error("All models failed to generate content");
+    }
 
     const outputJson = JSON.parse(response.text?.trim() || "{}");
     const freshArticleId = "art_" + Math.random().toString(36).substring(2, 11);
@@ -334,21 +371,21 @@ Always output your entire response formatted as a strict single JSON object foll
       estimatedPV: 0,
       clicks: 0,
       earnings: 0,
-      aiModelUsed: "Gemini 2.5 Flash (Cron Job)"
+      aiModelUsed: `Gemini ${successModel === 'gemini-1.5-flash' ? '1.5' : successModel === 'gemini-2.0-flash' ? '2.0' : '2.5'} Flash (Cron Job)`
     };
 
     // 5. Save completed review article to Firestore
-    console.log("Saving generated review article to articles collection...");
+    await pushLog("Saving generated review article to articles collection...", "info");
     await setDoc(doc(db, 'articles', freshArticle.id), freshArticle);
 
     // 6. Delete dispatched item from stock
-    console.log("Removing dispatched product from stock_products collection...");
+    await pushLog("Removing dispatched product from stock_products collection...", "info");
     await deleteDoc(doc(db, 'stock_products', dispatchProduct.asin));
 
-    console.log(`Hourly automated review generation success! Title: "${freshArticle.title}"`);
+    await pushLog(`Hourly automated review generation success! Title: "${freshArticle.title}"`, "success");
 
   } catch (error) {
-    console.error("Scheduler run failed:", error);
+    await pushLog(`Scheduler run failed: ${error.message || error}`, "warn");
     process.exit(1);
   }
 }
