@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import https from "https";
 
 dotenv.config();
 
@@ -9,32 +10,70 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Safe HTTP POST helper using Node's native https module to guarantee compatibility across all Node versions on Vercel
+function safeHttpPost(urlStr: string, body: any): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = new URL(urlStr);
+      const postData = JSON.stringify(body);
+      
+      const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(data);
+          } else {
+            reject(new Error(`Status ${res.statusCode}: ${data}`));
+          }
+        });
+      });
+
+      req.on('error', (err) => reject(err));
+      req.write(postData);
+      req.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 // Direct Firestore REST API logger to bypass Firebase client SDK compatibility crashes on Vercel Node runtime
 function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
-  const projectId = "go-app-4dcb9";
-  const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-  const timestamp = new Date().toLocaleTimeString();
-  const createdAt = new Date().toISOString();
+  try {
+    const projectId = "go-app-4dcb9";
+    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const timestamp = new Date().toLocaleTimeString();
+    const createdAt = new Date().toISOString();
 
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/system_logs?documentId=${id}`;
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/system_logs?documentId=${id}`;
 
-  const body = {
-    fields: {
-      id: { stringValue: id },
-      timestamp: { stringValue: timestamp },
-      message: { stringValue: message },
-      type: { stringValue: type },
-      createdAt: { stringValue: createdAt }
-    }
-  };
+    const body = {
+      fields: {
+        id: { stringValue: id },
+        timestamp: { stringValue: timestamp },
+        message: { stringValue: message },
+        type: { stringValue: type },
+        createdAt: { stringValue: createdAt }
+      }
+    };
 
-  fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  }).catch((err) => {
-    console.error("REST log write error:", err);
-  });
+    safeHttpPost(url, body).catch((err) => {
+      console.error("REST log write error:", err);
+    });
+  } catch (err) {
+    console.error("Failed inside pushLog:", err);
+  }
 
   console.log(`[${type.toUpperCase()}] ${message}`);
 }
@@ -55,33 +94,30 @@ async function generateGeminiReviewREST(prompt: string, apiKey: string): Promise
     try {
       console.log(`Attempting content generation via REST with model: ${model}...`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          systemInstruction: {
-            parts: [{
-              text: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
+      const resText = await safeHttpPost(url, {
+        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: {
+          parts: [{
+            text: `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
 Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
 You know how to convert raw product features into absolute life-changing experiences for the consumer.
 CRITICAL: Never output markdown formatting symbols like '#', '##', '###', '*', or '\`'. All text paragraphs must be plain text.
 Always output your entire response formatted as a strict single JSON object following the JSON schema, block formatting should be pure JSON only.`
-            }]
-          },
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                title: { type: "STRING", description: "思わず目が留まる魅力的な日本語記事タイトル" },
-                starRating: { type: "NUMBER", description: "製品への評価点数 (4.0から4.9までの小数)" },
-                introText: { type: "STRING", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
-                features: {
-                  type: "ARRAY",
-                  items: { type: "STRING" },
-                  description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
-                },
+          }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING", description: "思わず目が留まる魅力的な日本語記事タイトル" },
+              starRating: { type: "NUMBER", description: "製品への評価点数 (4.0から4.9までの小数)" },
+              introText: { type: "STRING", description: "読者の心をつかむ冒頭引き込み文 (80文字〜150文字程度)" },
+              features: {
+                type: "ARRAY",
+                items: { type: "STRING" },
+                description: "この製品が誇る主な売りポイント・際立つ特徴 3個"
+              },
                 pros: {
                   type: "ARRAY",
                   items: { type: "STRING" },
@@ -98,14 +134,10 @@ Always output your entire response formatted as a strict single JSON object foll
               required: ["title", "starRating", "introText", "features", "pros", "cons", "reviewBody", "ctaTitle"]
             }
           }
-        })
-      });
+        }
+      );
 
-      if (!res.ok) {
-        throw new Error(`Gemini REST returned status ${res.status}: ${await res.text()}`);
-      }
-
-      const data: any = await res.json();
+      const data: any = JSON.parse(resText);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
         throw new Error("Empty response from Gemini REST");
