@@ -124,20 +124,18 @@ async function getLwaAccessToken(): Promise<string | null> {
 }
 
 async function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
-  try {
-    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-    const timestamp = new Date().toLocaleTimeString();
-    await setDoc(doc(db, 'system_logs', id), {
-      id,
-      timestamp,
-      message,
-      type,
-      createdAt: new Date().toISOString()
-    });
-    console.log(`[${type.toUpperCase()}] ${message}`);
-  } catch (err) {
+  const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+  const timestamp = new Date().toLocaleTimeString();
+  setDoc(doc(db, 'system_logs', id), {
+    id,
+    timestamp,
+    message,
+    type,
+    createdAt: new Date().toISOString()
+  }).catch((err) => {
     console.error("Failed to write log to Firestore:", err);
-  }
+  });
+  console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
 async function run() {
