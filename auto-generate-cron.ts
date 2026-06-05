@@ -190,11 +190,12 @@ async function run() {
       if (d.data().asin) existingAsinsAndKeywords.add(d.data().asin.toLowerCase());
     });
 
-    await pushLog(`Current stock size: ${stockSnap.size}. Articles size: ${articlesSnap.size}.`, "info");
+    let stockDocs = [...stockSnap.docs];
+    await pushLog(`Current stock size: ${stockDocs.length}. Articles size: ${articlesSnap.size}.`, "info");
 
     // 2. Refill Stock if count is less than 24 (using Master pool with real ASINs)
-    if (stockSnap.size < 24) {
-      await pushLog(`Stock level is low (${stockSnap.size}/24). Initiating stock refill pipeline for 50 items...`, "info");
+    if (stockDocs.length < 24) {
+      await pushLog(`Stock level is low (${stockDocs.length}/24). Initiating stock refill pipeline for 50 items...`, "info");
 
       const refillPool: { asin: string; name: string; price: string; img: string; affiliateLink: string; category: string }[] = [];
 
@@ -208,9 +209,9 @@ async function run() {
 
           // Prevent duplication
           const isDuplicate = Array.from(existingAsinsAndKeywords).some(val => 
-            val.includes(item.name.toLowerCase()) || 
-            val.includes(item.keyword.toLowerCase()) ||
-            val.includes(item.asin.toLowerCase())
+              val.includes(item.name.toLowerCase()) || 
+              val.includes(item.keyword.toLowerCase()) ||
+              val.includes(item.asin.toLowerCase())
           );
 
           if (isDuplicate) continue;
@@ -245,21 +246,21 @@ async function run() {
 
       // Re-read stock snapshot to grab the newly added items
       const newStockSnap = await getDocs(stockCol);
-      stockSnap.docs.push(...newStockSnap.docs.filter(d => !stockSnap.docs.some(x => x.id === d.id)));
+      stockDocs = [...newStockSnap.docs];
     }
 
     // 3. Dispatch up to 3 items from stock to generate review
     const limit = 3;
-    const stockDocs = stockSnap.docs.slice(0, limit);
+    const itemsToProcess = stockDocs.slice(0, limit);
 
-    if (stockDocs.length === 0) {
+    if (itemsToProcess.length === 0) {
       await pushLog("No items available in stock to generate review.", "warn");
       return;
     }
 
-    await pushLog(`Found ${stockDocs.length} items to generate reviews for in this batch run.`, "info");
+    await pushLog(`Found ${itemsToProcess.length} items to generate reviews for in this batch run.`, "info");
 
-    for (const dispatchDoc of stockDocs) {
+    for (const dispatchDoc of itemsToProcess) {
       const dispatchProduct = dispatchDoc.data();
       await pushLog(`Dispatching product from stock for Hugging Face review: "${dispatchProduct.name}" (${dispatchProduct.asin})`, "info");
 
