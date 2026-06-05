@@ -1505,22 +1505,8 @@ jobs:
         {/* ==================================================================== */}
         {/* ======================= COMPREHENSIVE FOOTER COMPONENT ============ */}
         {/* ==================================================================== */}
-        <div className="border-t border-zinc-900 pt-5 mt-4 flex flex-col md:flex-row items-center justify-between px-1 text-[11px] sm:text-xs text-zinc-500 gap-4">
-          <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center md:justify-start">
-            <span>ENGINE: <span className="text-zinc-300">GEMINI 3.5 FLASH (AI SECURED SYSTEM SERVER)</span></span>
-            <span>ASSOCIATE TAG: <span className="text-orange-400 font-mono font-semibold">{state.associateId}</span></span>
-            <span>DATA STORAGE: <span className="text-emerald-500 font-semibold">{isDbLoaded ? "FIREBASE FIRESTORE SYNC" : "OFFLINE MEMORY BACKUP"}</span></span>
-          </div>
-          <div className="flex gap-4 items-center">
-            <span 
-              onClick={() => navigateTo(isAdminRoute ? '/' : '/host')}
-              className="text-zinc-400 hover:text-orange-400 tracking-wider font-bold transition-all cursor-pointer hover:underline text-xs sm:text-sm"
-            >
-              {isAdminRoute ? "公開ページへ移動" : "管理者ゲートウェイ"}
-            </span>
-            <span className="text-zinc-800">|</span>
-            <span>© 2026 あまぞん GO!! PORTFOLIO CO., LTD.</span>
-          </div>
+        <div className="border-t border-zinc-900 pt-5 mt-4 flex items-center justify-center px-1 text-[11px] sm:text-xs text-zinc-550">
+          <span>© 2026 あまぞん GO!! PORTFOLIO CO., LTD.</span>
         </div>
 
       </div>
