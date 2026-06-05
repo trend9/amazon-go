@@ -147,8 +147,7 @@ JSON Schema:
         { role: "user", content: userPrompt }
       ],
       max_tokens: 2048,
-      temperature: 0.7,
-      response_format: { type: "json_object" }
+      temperature: 0.7
     })
   });
 
@@ -163,7 +162,23 @@ JSON Schema:
     throw new Error("Empty content returned from Hugging Face API");
   }
 
-  return JSON.parse(content.trim());
+  let jsonStr = content.trim();
+  // Strip markdown code block wrappers if present
+  if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "");
+    jsonStr = jsonStr.replace(/\n?```$/, "");
+  }
+  jsonStr = jsonStr.trim();
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    const match = jsonStr.match(/\{[\s\S]*\}/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    throw e;
+  }
 }
 
 async function run() {
