@@ -116,6 +116,7 @@ export default function App() {
   const [inputUrl, setInputUrl] = useState('');
   const [inputCategory, setInputCategory] = useState('gadgets');
   const [customTitle, setCustomTitle] = useState('');
+  const [customAffiliateLink, setCustomAffiliateLink] = useState('');
   const [generationLoading, setGenerationLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [yamlCopied, setYamlCopied] = useState(false);
@@ -226,50 +227,8 @@ export default function App() {
 
   // Traffic / Activity simulation loop (Only active when simulatedCronActive is true under Admin control)
   useEffect(() => {
-    const trafficInterval = setInterval(() => {
-      if (!state.simulatedCronActive) return;
-
-      const articlesList = isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles;
-      if (articlesList.length === 0) return;
-
-      // Pick a random article to simulate interest
-      const randomIndex = Math.floor(Math.random() * articlesList.length);
-      const targetArt = articlesList[randomIndex];
-
-      // Simulate PV gain
-      const viewsGained = Math.floor(Math.random() * 3) + 1;
-      const isClick = Math.random() < 0.15; // 15% click rate
-      const payout = isClick ? Math.floor(Math.random() * 380) + 160 : 0;
-
-      // Update in db if admin is logged in, else local
-      const updatedArticle = {
-        ...targetArt,
-        estimatedPV: targetArt.estimatedPV + viewsGained,
-        clicks: targetArt.clicks + (isClick ? 1 : 0),
-        earnings: targetArt.earnings + payout
-      };
-
-      if (isAuthorizedAdmin && isDbLoaded) {
-        saveArticleToFirestore(updatedArticle).catch(err => {
-          console.error("Simulation Firebase write failed:", err);
-        });
-      }
-
-      // Always sync to local state so metrics update immediately in display
-      setState(prev => {
-        const nextArticles = prev.articles.map(a => a.id === targetArt.id ? updatedArticle : a);
-        return { ...prev, articles: nextArticles };
-      });
-
-      if (isClick) {
-        pushLog(`[成果発生] 「${targetArt.title.substring(0, 16)}...」がクリックされ成果が反映されました (+¥${payout})`, "success");
-      } else {
-        pushLog(`[アクセス増配] 「${targetArt.title.substring(0, 16)}...」が検証アクセスを受けました (+${viewsGained} PV)`, "info");
-      }
-
-    }, 7000);
-
-    return () => clearInterval(trafficInterval);
+    // Disabled simulated traffic loop at user's request to prevent fake metrics.
+    return;
   }, [state.simulatedCronActive, dbArticles, state.articles, isDbLoaded, authUser]);
 
   // Virtual Cron Hour progress simulator
@@ -334,7 +293,8 @@ export default function App() {
           inputUrl: inputUrl.trim(),
           category: inputCategory,
           associateId: state.associateId,
-          userCustomTitle: customTitle.trim()
+          userCustomTitle: customTitle.trim(),
+          customAffiliateLink: customAffiliateLink.trim()
         })
       });
 
@@ -358,6 +318,7 @@ export default function App() {
       setSelectedArticleId(freshArticle.id);
       setInputUrl('');
       setCustomTitle('');
+      setCustomAffiliateLink('');
       pushLog(`新規投稿されました！「${freshArticle.title}」が公開フィードに同期されました。`, "success");
 
       // Navigate to public view to preview
@@ -446,37 +407,36 @@ export default function App() {
 
   // Total reset catalog to defaults
   const handleResetCatalog = async () => {
-    if (!confirm("全ての記事カタログ、アソシエイト設定、成果ウォレットログを完全初期状態へリセットしますか？")) return;
+    if (!confirm("全ての記事の成果データ（クリック数・報酬・閲覧数）を0にリセットしますか？")) return;
 
     try {
-      // Authorized check
-      if (isAuthorizedAdmin) {
-        // Delete all firestore articles first
-        const currentList = isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles;
-        for (const art of currentList) {
-          await deleteArticleFromFirestore(art.id);
+      const cleanArticles = (isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles).map(art => ({
+        ...art,
+        clicks: 0,
+        earnings: 0,
+        estimatedPV: 0
+      }));
+
+      // Update in Firebase if authenticated admin
+      if (isAuthorizedAdmin && isDbLoaded) {
+        for (const art of cleanArticles) {
+          await saveArticleToFirestore(art);
         }
-        // Re-seed default values
-        await seedArticlesIfEmpty(INITIAL_ARTICLES);
-        await saveSettingsToFirestore('mattan0290c-22', 'https://www.amazon.co.jp');
       }
 
-      setState({
-        associateId: 'mattan0290c-22',
-        fallbackAdUrl: 'https://www.amazon.co.jp',
-        activeCategorySlug: 'all',
-        articles: INITIAL_ARTICLES,
+      setState(prev => ({
+        ...prev,
+        articles: cleanArticles,
         systemLogs: [
-          { id: Math.random().toString(), timestamp: new Date().toLocaleTimeString(), message: "カタログ設定が初期状態に完全復旧されました。", type: "info" }
+          { id: Math.random().toString(), timestamp: new Date().toLocaleTimeString(), message: "成果カウンターおよびアクセスログをすべて0に初期化リセットしました。", type: "info" }
         ],
-        showAdminPanel: false,
         simulatedCronActive: false
-      });
+      }));
       setSelectedArticleId(null);
-      pushLog("カタログが初期化されました。", "success");
+      pushLog("成果カウンターがリセットされました。", "success");
     } catch (err) {
       console.error(err);
-      alert("カタログの初期化中にエラーが発生しました。");
+      alert("カウンターのリセット中にエラーが発生しました。");
     }
   };
 
@@ -1310,6 +1270,19 @@ jobs:
                           </div>
                         </div>
 
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                            カスタム・アフィリエイトリンク（任意 - アソシエイト・ツールバー作成リンクなど）
+                          </label>
+                          <input
+                            type="text"
+                            value={customAffiliateLink}
+                            onChange={(e) => setCustomAffiliateLink(e.target.value)}
+                            placeholder="例: https://amzn.to/xxxxxx などを直接指定すると、優先的にそのリンクが使用されます"
+                            className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                          />
+                        </div>
+
                         <button
                           type="submit"
                           disabled={generationLoading}
@@ -1516,6 +1489,105 @@ jobs:
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* ======================= AMAZON BEST SELLERS SHOWCASE BANNER ======== */}
+        {/* ==================================================================== */}
+        {!isAdminRoute && (
+          <div className="mt-8 border-t border-zinc-900 pt-6">
+            <h4 className="text-xs sm:text-sm font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span>
+              本日のAmazon売れ筋タイムセール商品
+            </h4>
+
+            {/* Desktop View: 1 Row, 4 Columns Grid */}
+            <div className="hidden md:grid grid-cols-4 gap-4">
+              {[
+                {
+                  asin: "B0CL7Y437Z",
+                  name: "Fire TV Stick 4K Max - 極上の映像美とドルビーアトモス音響体験",
+                  price: "¥9,980",
+                  img: "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=250",
+                  label: "ベストセラー1位"
+                },
+                {
+                  asin: "B0CGDGN41Y",
+                  name: "Anker PowerBank (30W, 10000mAh) - 急速充電対応コンパクトモバイルバッテリー",
+                  price: "¥5,990",
+                  img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=250",
+                  label: "セール中"
+                },
+                {
+                  asin: "B0CHX58W9G",
+                  name: "Apple AirPods Pro (第2世代) USB-C - 魔法のようなノイズキャンセリング",
+                  price: "¥39,800",
+                  img: "https://images.unsplash.com/photo-1588449668338-d15176d337f7?auto=format&fit=crop&q=80&w=250",
+                  label: "人気急上昇"
+                },
+                {
+                  asin: "B0BTMG5N5G",
+                  name: "SwitchBot スマートリモコン ハブ2 - 温度・湿度計付きスマートホーム中継器",
+                  price: "¥8,980",
+                  img: "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=250",
+                  label: "QOL向上定番"
+                }
+              ].map((prod, idx) => (
+                <a
+                  key={idx}
+                  href={`https://www.amazon.co.jp/dp/${prod.asin}/ref=nosim?tag=${state.associateId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-zinc-950 border border-zinc-900 rounded-xl p-3.5 flex flex-col justify-between hover:border-orange-500/40 hover:scale-[1.02] transition-all group cursor-pointer text-left"
+                >
+                  <div className="space-y-2.5">
+                    <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
+                      <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" />
+                      <span className="absolute top-1.5 left-1.5 text-[8px] bg-amber-500 text-black font-black px-1.5 py-0.5 rounded tracking-wide uppercase">
+                        {prod.label}
+                      </span>
+                    </div>
+                    <h5 className="text-[11px] font-bold text-zinc-300 line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                      {prod.name}
+                    </h5>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-zinc-900/60 flex items-center justify-between">
+                    <span className="text-sm font-black text-orange-400 font-mono">{prod.price}</span>
+                    <span className="text-[9px] bg-orange-500/10 text-orange-400 font-bold px-2 py-1 rounded group-hover:bg-orange-500 group-hover:text-black transition-all">
+                      詳細を見る
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Mobile View: Slim Horizontal 1 Row, 1 Column Banner at the bottom */}
+            <div className="md:hidden block">
+              <a
+                href={`https://www.amazon.co.jp/gp/bestsellers/?tag=${state.associateId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-zinc-950 border border-zinc-900 hover:border-orange-500/40 rounded-xl p-3 flex items-center justify-between gap-3 cursor-pointer text-left transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
+                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=150" className="w-full h-full object-cover" alt="タイムセール" />
+                    <span className="absolute top-0.5 left-0.5 text-[6px] bg-amber-500 text-black font-extrabold px-1 rounded">HOT</span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[8px] text-orange-400 font-black uppercase tracking-wider block">タイムセール祭り開催中</span>
+                    <h5 className="text-[10px] font-bold text-zinc-300 truncate leading-normal">
+                      本日売れ筋のガジェット・周辺機器ランキング特価情報をチェック！
+                    </h5>
+                  </div>
+                </div>
+                <span className="text-[9px] bg-orange-500 text-black font-black px-2.5 py-1.5 rounded-lg flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap">
+                  セールを見る
+                  <ArrowUpRight className="w-2.5 h-2.5" />
+                </span>
+              </a>
+            </div>
           </div>
         )}
 

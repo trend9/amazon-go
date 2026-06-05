@@ -79,9 +79,46 @@ function selectProductMockImage(cat: string, namePrompt: string): string {
   return images[index];
 }
 
+/**
+ * Helper to fetch LWA Access Token for Amazon Creators API.
+ */
+async function getLwaAccessToken(): Promise<string | null> {
+  const clientId = process.env.AMAZON_CLIENT_ID;
+  const clientSecret = process.env.AMAZON_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://api.amazon.com/auth/o2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: "amazon:creator:api"
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn("Failed to get Amazon LWA token:", errText);
+      return null;
+    }
+
+    const data: any = await response.json();
+    return data.access_token || null;
+  } catch (err) {
+    console.error("LWA Token request error:", err);
+    return null;
+  }
+}
+
 // 2. High-Performance Review Generator API
 app.post("/api/generate-amazon-review", async (req, res) => {
-  const { inputUrl, category, associateId, userCustomTitle } = req.body;
+  const { inputUrl, category, associateId, userCustomTitle, customAffiliateLink } = req.body;
 
   const targetCategory = category || "gadgets";
   const userTag = associateId || "mattan0290c-22";
@@ -97,7 +134,33 @@ app.post("/api/generate-amazon-review", async (req, res) => {
   }
 
   // Pre-configured link
-  const finalAffLink = `https://www.amazon.co.jp/dp/${detectedAsin}?tag=${userTag}`;
+  const finalAffLink = customAffiliateLink && customAffiliateLink.trim()
+    ? customAffiliateLink.trim()
+    : `https://www.amazon.co.jp/dp/${detectedAsin}/ref=nosim?tag=${userTag}`;
+
+  // Attempt to fetch product details from Amazon Creators API using LWA credentials
+  let apiProductDetails: any = null;
+  try {
+    const token = await getLwaAccessToken();
+    if (token && detectedAsin) {
+      console.log(`Querying Amazon Creators API for ASIN: ${detectedAsin}...`);
+      const response = await fetch(`https://api.amazon.co.jp/creators/v1/items/${detectedAsin}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/json"
+        }
+      });
+      if (response.ok) {
+        apiProductDetails = await response.json();
+        console.log("Amazon Creators API product fetch successful:", apiProductDetails.title || detectedAsin);
+      } else {
+        const errText = await response.text();
+        console.warn(`Amazon Creators API returned code ${response.status}:`, errText);
+      }
+    }
+  } catch (apiErr) {
+    console.warn("Amazon API fetch failed or was skipped:", apiErr);
+  }
 
   let finalImg = selectProductMockImage(targetCategory, userCustomTitle || detectedAsin);
 
