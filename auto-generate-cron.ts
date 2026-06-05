@@ -134,7 +134,7 @@ JSON Schema:
 
 ※重要品質制限: 本文や特徴等のすべてのテキスト項目の中で、見出し文字(「#」「##」「###」等)や、アスタリスク(「*」)、コード用バックティック(「\`」)などのマークダウン特有 of テキストフォーマット表現文字は【絶対に】使わないでください。見出し部分は単なる一行のプレーンなテキスト段落として記述してください。`;
 
-  const response = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions", {
+  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${process.env.HF_TOKEN}`,
