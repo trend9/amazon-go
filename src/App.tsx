@@ -647,12 +647,12 @@ jobs:
   }, [selectedArticle]);
 
   return (
-    <div className="min-h-screen bg-[#070708] text-zinc-100 flex items-center justify-center p-2 sm:p-5 font-sans overflow-x-hidden relative selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen bg-[#070708] text-zinc-100 flex items-center justify-center p-2 sm:p-6 md:p-8 font-sans overflow-x-hidden relative selection:bg-orange-500 selection:text-white">
       {/* Glow ambient meshes */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-amber-500/5 blur-[140px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-orange-500/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div className="w-full max-w-[1240px] bg-[#0c0c0e] border border-zinc-900 rounded-2xl p-4 sm:p-6 md:p-8 flex flex-col gap-6 relative shadow-[0_24px_80px_rgba(0,0,0,0.85)] max-h-none">
+      <div className="w-full max-w-[1380px] bg-[#0c0c0e] border border-zinc-900 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col gap-6 relative shadow-[0_24px_80px_rgba(0,0,0,0.85)] max-h-none">
         
         {/* ==================================================================== */}
         {/* ================ HEADER COMPONENT: PATHWAY ROUTER ================= */}
@@ -666,7 +666,7 @@ jobs:
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
               </span>
-              <span className="text-[9px] tracking-[0.25em] text-orange-400 font-bold uppercase font-mono">
+              <span className="text-[10px] sm:text-xs tracking-[0.25em] text-orange-400 font-bold uppercase font-mono">
                 {isAdminRoute ? "AMAZON GO HOST MANAGER SECURITY CORE" : "CURATED SHOPPING EXPERT REVIEWS"}
               </span>
             </div>
@@ -674,12 +674,12 @@ jobs:
             <div className="flex flex-wrap items-center gap-3">
               <div 
                 onClick={() => navigateTo('/')}
-                className="bg-zinc-900 text-amber-500 border border-zinc-800/80 font-black text-xl sm:text-2xl px-3.5 py-1 rounded-lg tracking-tighter flex items-center gap-1.5 hover:border-amber-500/40 cursor-pointer shadow-inner transition-all"
+                className="bg-zinc-900 text-amber-500 border border-zinc-800/80 font-black text-xl sm:text-2xl md:text-3xl px-3.5 py-1 rounded-lg tracking-tighter flex items-center gap-1.5 hover:border-amber-500/40 cursor-pointer shadow-inner transition-all"
               >
                 あまぞん GO!!
               </div>
               <span className="text-zinc-700 text-base font-normal hidden sm:inline">|</span>
-              <p className="text-xs text-zinc-400 font-medium">
+              <p className="text-xs sm:text-sm text-zinc-400 font-medium">
                 {isAdminRoute ? "管理者コンソール・アフィリエイト設定" : "バイヤーが徹底検証。本当に買ってよかったモノだけを紹介する本音ブログ"}
               </p>
             </div>
@@ -710,18 +710,18 @@ jobs:
               
               {/* Refinement Search input */}
               <div className="relative">
-                <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+                <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5 sm:top-3.5" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="カテゴリーを検索する..."
-                  className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 focus:border-orange-500 focus:outline-none rounded-lg pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 transition-all"
+                  className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 focus:border-orange-500 focus:outline-none rounded-lg pl-9 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm text-white placeholder-zinc-500 transition-all"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2 text-zinc-400 hover:text-white text-xs font-bold"
+                    className="absolute right-3 top-2 sm:top-3 text-zinc-400 hover:text-white text-xs sm:text-sm font-bold"
                   >
                     ×
                   </button>
@@ -729,24 +729,24 @@ jobs:
               </div>
 
               {/* Sidebar Category Selection */}
-              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl p-3 flex flex-col gap-1 text-left">
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest px-2.5 pb-2 border-b border-zinc-900/60 mb-2 block">
+              <div className="bg-zinc-900/30 border border-zinc-900 rounded-xl p-3 sm:p-4 flex flex-col gap-1.5 text-left">
+                <span className="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase tracking-widest px-2.5 pb-2 border-b border-zinc-900/60 mb-2 block">
                   カテゴリー
                 </span>
 
                 <button
                   onClick={() => setState(prev => ({ ...prev, activeCategorySlug: 'all' }))}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-left
+                  className={`w-full flex items-center justify-between px-3 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer text-left
                     ${state.activeCategorySlug === 'all'
                       ? 'bg-orange-500/10 text-orange-400 border-l-[3px] border-orange-500'
                       : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
                     }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Store className="w-3.5 h-3.5" />
+                    <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span>すべてのカテゴリー ({resolvedArticles.length})</span>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-zinc-700" />
+                  <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-700" />
                 </button>
 
                 {AMAZON_CATEGORIES.map((cat) => {
@@ -755,7 +755,7 @@ jobs:
                     <button
                       key={cat.id}
                       onClick={() => setState(prev => ({ ...prev, activeCategorySlug: cat.slug }))}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer text-left
+                      className={`w-full flex items-center justify-between px-3 py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-left
                         ${state.activeCategorySlug === cat.slug
                           ? 'bg-orange-500/10 text-orange-400 border-l-[3px] border-orange-500'
                           : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
@@ -763,14 +763,14 @@ jobs:
                       title={cat.description}
                     >
                       <div className="flex items-center gap-2 truncate pr-1">
-                        <CategoryIcon icon={cat.icon} className="w-3.5 h-3.5" />
+                        <CategoryIcon icon={cat.icon} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span className="truncate">{cat.name}</span>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="text-[9px] bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-550 font-mono">
+                        <span className="text-[10px] sm:text-xs bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-550 font-mono">
                           {countInCat}
                         </span>
-                        <ChevronRight className="w-3 h-3 text-zinc-750" />
+                        <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-750" />
                       </div>
                     </button>
                   );
@@ -778,12 +778,12 @@ jobs:
               </div>
 
               {/* Secure Editorial Quality Statement */}
-              <div className="bg-zinc-950/40 border border-zinc-900 p-4 rounded-xl text-left space-y-2">
-                <h4 className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="bg-zinc-950/40 border border-zinc-900 p-4 sm:p-5 rounded-xl text-left space-y-2">
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
                   本音と透明性を最優先
                 </h4>
-                <p className="text-[10px] text-zinc-500 leading-normal">
+                <p className="text-[11px] sm:text-xs text-zinc-500 leading-normal">
                   紹介しているアイテムはすべて専門バイヤーによる詳細調査に基づいています。メリットだけでなくデメリットも正直に隠さず記述。
                 </p>
               </div>
@@ -794,17 +794,17 @@ jobs:
             <div className="col-span-1 lg:col-span-9 grid grid-cols-1 md:grid-cols-12 gap-6">
               
               {/* LIST FEED AREA (Left panel of sub division) */}
-              <div className={`${selectedArticleId ? 'md:col-span-4' : 'md:col-span-12'} flex flex-col gap-4 overflow-y-auto max-h-[680px] pr-1 custom-scrollbar`}>
+              <div className={`${selectedArticleId ? 'md:col-span-4' : 'md:col-span-12'} flex flex-col gap-4 overflow-y-auto max-h-[820px] pr-1 custom-scrollbar`}>
                 <div className="flex justify-between items-center bg-zinc-950/30 p-2.5 rounded-lg border border-zinc-900/50">
-                  <h3 className="text-xs font-black text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs sm:text-sm font-black text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                     <span>レビュー一覧</span>
-                    <span className="text-[10px] bg-zinc-900 px-2 py-0.5 rounded text-zinc-500 font-mono">
+                    <span className="text-[10px] sm:text-xs bg-zinc-900 px-2 py-0.5 rounded text-zinc-500 font-mono">
                       {filteredArticles.length}
                     </span>
                   </h3>
                   
                   {state.activeCategorySlug !== 'all' && (
-                    <span className="text-[9px] text-orange-400 font-bold bg-orange-500/5 px-2 py-0.5 rounded border border-orange-500/10">
+                    <span className="text-[9px] sm:text-xs text-orange-400 font-bold bg-orange-500/5 px-2 py-0.5 rounded border border-orange-500/10">
                       {AMAZON_CATEGORIES.find(c => c.slug === state.activeCategorySlug)?.name}
                     </span>
                   )}
@@ -824,31 +824,31 @@ jobs:
                               : 'bg-[#0a0a0c] border-[#131317] hover:bg-[#0e0e11] hover:border-zinc-800'
                             }`}
                         >
-                          <div className="w-16 h-16 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800/80 flex-shrink-0 relative">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800/80 flex-shrink-0 relative">
                             <img
                               src={art.imageUrl}
                               alt={art.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                               referrerPolicy="no-referrer"
                             />
-                            <span className="absolute bottom-1 right-1 text-[8px] bg-black/80 px-1 rounded text-orange-400 font-mono font-bold flex items-center gap-0.5">
-                              <Star className="w-2 h-2 text-orange-500 fill-orange-500" />
+                            <span className="absolute bottom-1 right-1 text-[8px] sm:text-[10px] bg-black/80 px-1 rounded text-orange-400 font-mono font-bold flex items-center gap-0.5">
+                              <Star className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-orange-500 fill-orange-500" />
                               {art.starRating}
                             </span>
                           </div>
 
                           <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
                             <div>
-                              <span className="text-[8px] text-[#FF9900] font-mono px-1.5 py-0.2 bg-orange-500/5 border border-orange-500/10 rounded uppercase tracking-wider mb-1 inline-block">
+                              <span className="text-[8px] sm:text-[10px] text-[#FF9900] font-mono px-1.5 py-0.2 bg-orange-500/5 border border-orange-500/10 rounded uppercase tracking-wider mb-1 inline-block">
                                 {AMAZON_CATEGORIES.find(c => c.slug === art.category)?.name}
                               </span>
                               
-                              <h4 className={`text-xs font-bold leading-snug line-clamp-2 transition-colors
+                              <h4 className={`text-xs sm:text-sm font-bold leading-snug line-clamp-2 transition-colors
                                 ${isCurrent ? 'text-orange-400' : 'text-zinc-300 group-hover:text-white'}`}>
                                 {art.title}
                               </h4>
                             </div>
-                            <span className="text-[9px] text-zinc-650 font-mono block mt-1">
+                            <span className="text-[9px] sm:text-xs text-zinc-650 font-mono block mt-1">
                               公開日: {art.createdAt.substring(0, 10)}
                             </span>
                           </div>
@@ -859,7 +859,7 @@ jobs:
                 ) : (
                   <div className="border border-dashed border-zinc-900 rounded-xl p-10 text-center opacity-60">
                     <BookOpen className="w-8 h-8 mx-auto text-zinc-500 mb-2" />
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs sm:text-sm text-zinc-400">
                       該当カテゴリーのレビュー記事は現在スタンバイ中です。
                     </p>
                   </div>
@@ -874,10 +874,10 @@ jobs:
                     
                     {/* Header meta badges */}
                     <div className="flex flex-wrap items-center gap-3 border-b border-zinc-900/80 pb-4">
-                      <span className="text-[9px] bg-orange-500/10 text-orange-400 font-mono font-bold px-2 py-0.5 rounded border border-orange-500/20">
+                      <span className="text-[10px] sm:text-xs bg-orange-500/10 text-orange-400 font-mono font-bold px-2 py-0.5 rounded border border-orange-500/20">
                         {AMAZON_CATEGORIES.find(c => c.slug === selectedArticle.category)?.name}
                       </span>
-                      <span className="text-[9px] text-zinc-600 font-mono">
+                      <span className="text-[10px] sm:text-xs text-zinc-600 font-mono">
                         ASIN: {selectedArticle.asin}
                       </span>
                     </div>
@@ -885,15 +885,15 @@ jobs:
                     {/* Title display */}
                     <div className="space-y-1.5">
                       <div className="flex items-start gap-3 justify-between">
-                        <h2 className="text-base sm:text-xl font-bold text-white tracking-tight leading-snug">
+                        <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-snug">
                           {selectedArticle.title}
                         </h2>
-                        <div className="flex items-center gap-1 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-amber-400 font-extrabold text-xs flex-shrink-0 mt-0.5">
-                          <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-amber-400 font-extrabold text-xs sm:text-sm flex-shrink-0 mt-0.5">
+                          <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400" />
                           <span>{selectedArticle.starRating}</span>
                         </div>
                       </div>
-                      <p className="text-[10px] text-zinc-500 font-mono">
+                      <p className="text-[11px] sm:text-xs text-zinc-500 font-mono">
                         投稿日: {selectedArticle.createdAt}
                       </p>
                     </div>
@@ -912,16 +912,16 @@ jobs:
                       </div>
 
                       <div className="md:col-span-8 flex flex-col justify-between gap-3">
-                        <div className="bg-gradient-to-r from-zinc-950 to-zinc-900/40 p-3.5 rounded-xl border border-zinc-900/60 font-sans italic text-zinc-300 leading-relaxed text-xs sm:text-sm">
+                        <div className="bg-gradient-to-r from-zinc-950 to-zinc-900/40 p-3.5 sm:p-5 rounded-xl border border-zinc-900/60 font-sans italic text-zinc-300 leading-relaxed text-xs sm:text-sm md:text-base">
                           「 {selectedArticle.introText} 」
                         </div>
 
                         {/* Bullet key highlights */}
                         <div className="space-y-1.5 text-left">
-                          <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest block">
+                          <span className="text-[10px] sm:text-xs font-black text-orange-400 uppercase tracking-widest block">
                             🔑 注目すべき特徴
                           </span>
-                          <ul className="text-xs space-y-1 text-zinc-400 font-sans">
+                          <ul className="text-xs sm:text-sm space-y-1.5 text-zinc-400 font-sans">
                             {selectedArticle.features.map((feat, idx) => (
                               <li key={idx} className="flex items-start gap-1.5">
                                 <span className="text-orange-500 font-bold">✓</span>
@@ -935,8 +935,8 @@ jobs:
 
                     {/* Merits/Demerits section */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                      <div className="bg-[#0b100e] border border-emerald-950/60 p-3.5 rounded-xl text-xs space-y-2">
-                        <div className="flex items-center gap-1.5 text-emerald-400 font-black border-b border-emerald-950 pb-1.5">
+                      <div className="bg-[#0b100e] border border-emerald-950/60 p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-black border-b border-emerald-950 pb-1.5 text-xs sm:text-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                           メリット（良かった点）
                         </div>
@@ -950,8 +950,8 @@ jobs:
                         </ul>
                       </div>
 
-                      <div className="bg-[#120a0a] border border-red-950/60 p-3.5 rounded-xl text-xs space-y-2">
-                        <div className="flex items-center gap-1.5 text-red-400 font-black border-b border-red-950 pb-1.5">
+                      <div className="bg-[#120a0a] border border-red-950/60 p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-red-400 font-black border-b border-red-950 pb-1.5 text-xs sm:text-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                           デメリット・懸念点
                         </div>
@@ -968,10 +968,10 @@ jobs:
 
                     {/* Markdown Body reviews details */}
                     <div className="border-t border-zinc-900 pt-5 mt-4 space-y-3">
-                      <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase tracking-widest block">
+                      <span className="text-[11px] sm:text-xs text-zinc-500 font-mono font-bold uppercase tracking-widest block">
                         実機レビュー検証記録
                       </span>
-                      <div className="text-xs sm:text-sm text-zinc-350 leading-relaxed space-y-4 pr-1 border-l border-zinc-900/60 pl-3 whitespace-pre-line font-sans">
+                      <div className="text-xs sm:text-sm md:text-base text-zinc-200 leading-relaxed space-y-4 pr-1 border-l border-zinc-900/60 pl-3 whitespace-pre-line font-sans">
                         {cleanMarkdownHeaders(selectedArticle.reviewBody)}
                       </div>
                     </div>
@@ -980,9 +980,9 @@ jobs:
 
                   {/* HIGH CTA ACTION BAR */}
                   <div className="mt-8 pt-6 border-t border-zinc-900 space-y-3">
-                    <div className="bg-gradient-to-r from-orange-600/10 via-amber-500/10 to-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-center shadow-md relative overflow-hidden group">
+                    <div className="bg-gradient-to-r from-orange-600/10 via-amber-500/10 to-orange-500/10 border border-orange-500/20 p-5 rounded-xl text-center shadow-md relative overflow-hidden group">
                       
-                      <span className="text-[11px] text-amber-500 font-sans font-black tracking-widest block mb-2 px-1">
+                      <span className="text-xs sm:text-sm text-amber-500 font-sans font-black tracking-widest block mb-2.5 px-1">
                         {selectedArticle.ctaTitle}
                       </span>
 
@@ -1006,13 +1006,13 @@ jobs:
                             return { ...prev, articles: updated };
                           });
                         }}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-extrabold text-xs sm:text-sm tracking-wider px-8 py-3.5 rounded-lg transition-all shadow-[0_4px_18px_rgba(249,115,22,0.15)] cursor-pointer"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-extrabold text-xs sm:text-sm md:text-base tracking-wider px-8 sm:px-10 py-3.5 sm:py-4 rounded-lg transition-all shadow-[0_4px_18px_rgba(249,115,22,0.15)] cursor-pointer animate-pulse"
                       >
                         Amazon 公式サイトで詳細と最安値をチェックする
-                        <ArrowUpRight className="w-4 h-4 text-black font-extrabold" />
+                        <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-black font-extrabold" />
                       </a>
 
-                      <span className="text-[8px] text-zinc-650 font-mono mt-2 block">
+                      <span className="text-[9px] sm:text-xs text-zinc-500 font-mono mt-2.5 block">
                         ※上記リンクからAmazon.co.jpに遷移してご購入いただくと、割引価格や限定アソシエイト保証が適用されます。
                       </span>
                     </div>
@@ -1505,7 +1505,7 @@ jobs:
         {/* ==================================================================== */}
         {/* ======================= COMPREHENSIVE FOOTER COMPONENT ============ */}
         {/* ==================================================================== */}
-        <div className="border-t border-zinc-900 pt-5 mt-4 flex flex-col md:flex-row items-center justify-between px-1 text-[10px] text-zinc-500 gap-4">
+        <div className="border-t border-zinc-900 pt-5 mt-4 flex flex-col md:flex-row items-center justify-between px-1 text-[11px] sm:text-xs text-zinc-500 gap-4">
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center md:justify-start">
             <span>ENGINE: <span className="text-zinc-300">GEMINI 3.5 FLASH (AI SECURED SYSTEM SERVER)</span></span>
             <span>ASSOCIATE TAG: <span className="text-orange-400 font-mono font-semibold">{state.associateId}</span></span>
@@ -1514,7 +1514,7 @@ jobs:
           <div className="flex gap-4 items-center">
             <span 
               onClick={() => navigateTo(isAdminRoute ? '/' : '/host')}
-              className="text-zinc-450 hover:text-orange-400 tracking-wider font-bold transition-all cursor-pointer hover:underline"
+              className="text-zinc-400 hover:text-orange-400 tracking-wider font-bold transition-all cursor-pointer hover:underline text-xs sm:text-sm"
             >
               {isAdminRoute ? "公開ページへ移動" : "管理者ゲートウェイ"}
             </span>
