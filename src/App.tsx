@@ -354,8 +354,21 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || `Server returned status code ${response.status}`);
+        const errText = await response.text().catch(() => "");
+        let errMsg = `Server returned status code ${response.status}`;
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error) {
+            errMsg = errJson.error;
+          } else if (errJson.message) {
+            errMsg = errJson.message;
+          }
+        } catch {
+          if (errText.trim()) {
+            errMsg = `${errMsg}. Details: ${errText.slice(0, 500)}`;
+          }
+        }
+        throw new Error(errMsg);
       }
 
       const freshArticle: AmazonProductArticle = await response.json();
