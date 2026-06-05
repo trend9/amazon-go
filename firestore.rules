@@ -7,10 +7,10 @@ service cloud.firestore {
              request.auth.token.email == 'mattan029@gmail.com';
     }
 
-    // Articles catalog is readable by any public visitor, but writable only by the admin
+    // Articles catalog is readable by any public visitor, but writable only by the admin or cron job using secret token
     match /articles/{articleId} {
       allow read: if true;
-      allow write, delete: if isAdmin();
+      allow write, delete: if isAdmin() || (request.resource.data != null && request.resource.data.cronSecret == 'mattan029-cron-bypass');
     }
 
     // Config parameters are readable by anyone, only writable by the admin

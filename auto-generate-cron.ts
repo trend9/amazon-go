@@ -84,6 +84,38 @@ const MASTER_PRODUCT_POOL: Record<string, { asin: string; name: string; keyword:
   ]
 };
 
+function sanitizeJsonString(rawJson: string): string {
+  let insideString = false;
+  let escaped = false;
+  let result = "";
+  for (let i = 0; i < rawJson.length; i++) {
+    const char = rawJson[i];
+    if (char === '"' && !escaped) {
+      insideString = !insideString;
+      result += char;
+    } else if (char === '\\' && !escaped) {
+      escaped = true;
+      result += char;
+    } else {
+      escaped = false;
+      if (insideString) {
+        if (char === '\n') {
+          result += '\\n';
+        } else if (char === '\r') {
+          result += '\\r';
+        } else if (char === '\t') {
+          result += '\\t';
+        } else {
+          result += char;
+        }
+      } else {
+        result += char;
+      }
+    }
+  }
+  return result;
+}
+
 async function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
   const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
   const timestamp = new Date().toLocaleTimeString();
@@ -170,10 +202,12 @@ JSON Schema:
   }
   jsonStr = jsonStr.trim();
 
+  const sanitized = sanitizeJsonString(jsonStr);
+
   try {
-    return JSON.parse(jsonStr);
+    return JSON.parse(sanitized);
   } catch (e) {
-    const match = jsonStr.match(/\{[\s\S]*\}/);
+    const match = sanitized.match(/\{[\s\S]*\}/);
     if (match) {
       return JSON.parse(match[0]);
     }
@@ -305,7 +339,8 @@ async function run() {
           estimatedPV: 0,
           clicks: 0,
           earnings: 0,
-          aiModelUsed: `Qwen 2.5 72B (Cron Job via HF)`
+          aiModelUsed: `Qwen 2.5 72B (Cron Job via HF)`,
+          cronSecret: "mattan029-cron-bypass"
         };
 
         // 5. Save completed review article to Firestore
