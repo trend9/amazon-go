@@ -35,6 +35,7 @@ import {
   loginWithGoogle,
   logoutUser,
   seedArticlesIfEmpty,
+  seedSettingsIfEmptyOrDummy,
   subscribeToArticles,
   saveArticleToFirestore,
   deleteArticleFromFirestore,
@@ -79,8 +80,9 @@ export default function App() {
       const saved = localStorage.getItem('amazongo_app_state_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
+        const activeTag = (!parsed.associateId || parsed.associateId === 'amazongo-22' || parsed.associateId === 'dummy') ? 'mattan0290c-22' : parsed.associateId;
         return {
-          associateId: parsed.associateId || 'mattan0290c-22',
+          associateId: activeTag,
           fallbackAdUrl: parsed.fallbackAdUrl || 'https://www.amazon.co.jp',
           activeCategorySlug: parsed.activeCategorySlug || 'all',
           articles: Array.isArray(parsed.articles) ? parsed.articles : INITIAL_ARTICLES,
@@ -234,6 +236,7 @@ export default function App() {
 
     // 2. Seed initial articles if FireStore is completely empty
     seedArticlesIfEmpty(INITIAL_ARTICLES);
+    seedSettingsIfEmptyOrDummy();
 
     // 3. Real-time Firestore subscription
     const unsubscribeArticles = subscribeToArticles(
@@ -1567,7 +1570,7 @@ jobs:
                 >
                   <div className="space-y-2.5">
                     <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                      <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" />
+                      <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
                       <span className="absolute top-1.5 left-1.5 text-[8px] bg-amber-500 text-black font-black px-1.5 py-0.5 rounded tracking-wide uppercase">
                         {prod.label}
                       </span>
@@ -1597,7 +1600,7 @@ jobs:
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
-                      <img src={bannerProducts[0].img} className="w-full h-full object-cover" alt={bannerProducts[0].name} />
+                      <img src={bannerProducts[0].img} className="w-full h-full object-cover" alt={bannerProducts[0].name} referrerPolicy="no-referrer" />
                       <span className="absolute top-0.5 left-0.5 text-[6px] bg-amber-500 text-black font-extrabold px-1 rounded">HOT</span>
                     </div>
                     <div className="min-w-0">

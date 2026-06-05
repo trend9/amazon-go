@@ -11,6 +11,7 @@ import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   deleteDoc,
@@ -65,6 +66,25 @@ export async function seedArticlesIfEmpty(initialArticles: AmazonProductArticle[
     }
   } catch (err) {
     console.warn('Seeding articles failed (possibly due to read rules or offline mode):', err);
+  }
+}
+
+/**
+ * Seed initial settings config into Firestore if it does not exist or is set to a dummy ID.
+ */
+export async function seedSettingsIfEmptyOrDummy(): Promise<void> {
+  try {
+    const settingsDocRef = doc(db, 'settings', 'config');
+    const docSnap = await getDoc(settingsDocRef);
+    if (!docSnap.exists() || docSnap.data().associateId === 'amazongo-22' || docSnap.data().associateId === 'dummy') {
+      console.log('Firestore settings config is empty or dummy; seeding default associate ID: mattan0290c-22...');
+      await setDoc(settingsDocRef, {
+        associateId: 'mattan0290c-22',
+        fallbackAdUrl: 'https://www.amazon.co.jp'
+      });
+    }
+  } catch (err) {
+    console.warn('Seeding settings config failed:', err);
   }
 }
 
