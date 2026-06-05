@@ -207,3 +207,20 @@ export function subscribeToLogs(onUpdate: (logs: any[]) => void) {
     console.warn('System logs subscription error:', err);
   });
 }
+
+/**
+ * Queues a product to the stock_products collection for automated review generation.
+ */
+export async function addProductToStockInFirestore(product: {
+  asin: string;
+  name: string;
+  price: string;
+  img: string;
+  affiliateLink: string;
+  category: string;
+}): Promise<void> {
+  await setDoc(doc(db, 'stock_products', product.asin), {
+    ...product,
+    fetchedAt: new Date().toISOString()
+  });
+}

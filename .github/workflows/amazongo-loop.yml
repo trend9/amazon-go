@@ -1,0 +1,28 @@
+name: "あまぞん GO!! 3時間おきレビュー自動配信"
+
+on:
+  schedule:
+    - cron: '0 */3 * * *' # 3時間おきに実行
+  workflow_dispatch: # 手動実行可能
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.jsのインストール
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: パッケージインストール
+        run: npm ci
+
+      - name: 自動レビュー生成システム（HF API駆動）
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          AMAZON_ASSOCIATE_ID: ${{ secrets.AMAZON_ASSOCIATE_ID }}
+        run: npm run auto-generate-cron

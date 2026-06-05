@@ -43,7 +43,8 @@ import {
   saveSettingsToFirestore,
   clearStockProductsInFirestore,
   saveLogToFirestore,
-  subscribeToLogs
+  subscribeToLogs,
+  addProductToStockInFirestore
 } from './firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 
@@ -117,15 +118,27 @@ export default function App() {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Admin Form variables
-  const [inputUrl, setInputUrl] = useState('');
-  const [inputCategory, setInputCategory] = useState('gadgets');
-  const [customTitle, setCustomTitle] = useState('');
-  const [customAffiliateLink, setCustomAffiliateLink] = useState('');
-  const [generationLoading, setGenerationLoading] = useState(false);
+  // CMS Editor states
+  const [selectedEditArticleId, setSelectedEditArticleId] = useState<string>('');
+  const [editTitle, setEditTitle] = useState<string>('');
+  const [editStarRating, setEditStarRating] = useState<number>(4.5);
+  const [editIntroText, setEditIntroText] = useState<string>('');
+  const [editReviewBody, setEditReviewBody] = useState<string>('');
+  const [editCtaTitle, setEditCtaTitle] = useState<string>('');
+  const [editAffiliateLink, setEditAffiliateLink] = useState<string>('');
+  const [cmsSaveLoading, setCmsSaveLoading] = useState(false);
+
+  // Queue Form State (Vercel-safe review reservations)
+  const [queueAsin, setQueueAsin] = useState('');
+  const [queueName, setQueueName] = useState('');
+  const [queuePrice, setQueuePrice] = useState('');
+  const [queueImg, setQueueImg] = useState('');
+  const [queueAffiliateLink, setQueueAffiliateLink] = useState('');
+  const [queueCategory, setQueueCategory] = useState('gadgets');
+  const [queueLoading, setQueueLoading] = useState(false);
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [yamlCopied, setYamlCopied] = useState(false);
-  const [autoGenProgress, setAutoGenProgress] = useState(0);
 
   // Navigation pushState utility
   const navigateTo = (path: string) => {
@@ -280,31 +293,7 @@ export default function App() {
     }
   }, [state]);
 
-  // Traffic / Activity simulation loop (Only active when simulatedCronActive is true under Admin control)
-  useEffect(() => {
-    // Disabled simulated traffic loop at user's request to prevent fake metrics.
-    return;
-  }, [state.simulatedCronActive, dbArticles, state.articles, isDbLoaded, authUser]);
 
-  // Virtual Cron Hour progress simulator
-  useEffect(() => {
-    if (!state.simulatedCronActive) {
-      setAutoGenProgress(0);
-      return;
-    }
-
-    const cronTimer = setInterval(() => {
-      setAutoGenProgress(prev => {
-        if (prev >= 100) {
-          triggerAutomatedCronWriting();
-          return 0;
-        }
-        return prev + 10;
-      });
-    }, 1500); // Cycles every 15 seconds representing virtual cron trigger
-
-    return () => clearInterval(cronTimer);
-  }, [state.simulatedCronActive]);
 
   // Google Login handling
   const handleGoogleLogin = async () => {
@@ -327,127 +316,89 @@ export default function App() {
     }
   };
 
-  // Invoke server-side Gemini 3.5 generation
-  const handleCreateNewArticle = async (e: FormEvent) => {
+  // CMS edit handler to save article changes to database and local state
+  const handleUpdateArticle = async (e: FormEvent) => {
     e.preventDefault();
-    if (generationLoading) return;
-
-    if (!inputUrl.trim() || !customAffiliateLink.trim()) {
-      alert("商品名（製品キーワード）とアフィリエイトリンクはどちらも必須入力です。");
+    if (!selectedEditArticleId) {
+      alert("編集・修正する記事を選択してください。");
       return;
     }
-
-    setGenerationLoading(true);
-    pushLog(`Gemini 3.5 Flash に暗号化送信。キーワードに基づいて高CTAレビュー文を執筆中...`, "ai");
-
+    setCmsSaveLoading(true);
     try {
-      const response = await fetch("/api/generate-amazon-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inputUrl: inputUrl.trim(),
-          category: inputCategory,
-          associateId: state.associateId,
-          userCustomTitle: customTitle.trim(),
-          customAffiliateLink: customAffiliateLink.trim()
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        let errMsg = `Server returned status code ${response.status}`;
-        try {
-          const errJson = JSON.parse(errText);
-          if (errJson.error) {
-            errMsg = errJson.error;
-          } else if (errJson.message) {
-            errMsg = errJson.message;
-          }
-        } catch {
-          if (errText.trim()) {
-            errMsg = `${errMsg}. Details: ${errText.slice(0, 500)}`;
-          }
-        }
-        throw new Error(errMsg);
+      const art = resolvedArticles.find(a => a.id === selectedEditArticleId);
+      if (!art) {
+        throw new Error("対象の記事が見つかりません。");
       }
 
-      const freshArticle: AmazonProductArticle = await response.json();
+      const updatedArticle: AmazonProductArticle = {
+        ...art,
+        title: editTitle,
+        starRating: Number(editStarRating),
+        introText: editIntroText,
+        reviewBody: editReviewBody,
+        ctaTitle: editCtaTitle,
+        affiliateLink: editAffiliateLink,
+        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
 
-      // Write to Firebase if authenticated admin
+      // Save to Firebase if authenticated admin
       if (isAuthorizedAdmin) {
-        await saveArticleToFirestore(freshArticle);
+        await saveArticleToFirestore(updatedArticle);
       }
 
       // Sync local state as well
       setState(prev => ({
         ...prev,
-        articles: [freshArticle, ...prev.articles]
+        articles: prev.articles.map(a => a.id === selectedEditArticleId ? updatedArticle : a)
       }));
 
-      setSelectedArticleId(freshArticle.id);
-      setInputUrl('');
-      setCustomTitle('');
-      setCustomAffiliateLink('');
-      pushLog(`新規投稿されました！「${freshArticle.title}」が公開フィードに同期されました。`, "success");
-
-      // Navigate to public view to preview
-      navigateTo('/');
+      pushLog(`記事「${updatedArticle.title}」の文字修正を保存しました。`, "success");
+      alert("修正内容が保存されました！");
     } catch (err: any) {
-      console.error("AI review writer failed:", err);
-      alert(`執筆生成中にエラーが発生しました。\nエラー詳細: ${err.message || err}`);
-      pushLog(`API執筆プロセスに失敗: ${err.message || err}`, "warn");
+      console.error("CMS Edit failed:", err);
+      alert(`記事の修正保存中にエラーが発生しました。\nエラー詳細: ${err.message || err}`);
     } finally {
-      setGenerationLoading(false);
+      setCmsSaveLoading(false);
     }
   };
 
-  // Trigger automated simulation cron article writing
-  const triggerAutomatedCronWriting = async () => {
-    const randomCat = AMAZON_CATEGORIES[Math.floor(Math.random() * AMAZON_CATEGORIES.length)];
-    const sampleProductPrompts: Record<string, string[]> = {
-      gadgets: ["Anker Soundcore Space Core", "DJI Pocket 4 Pro", "Sony LinkBuds S"],
-      pc: ["Logitech K950 Keyboard", "Anker PowerExpand Hub", "EIZO FlexScan Premium"],
-      kitchen: ["象印 炎舞炊き ハイエンド", "DeLonghi 全自動エスプレッソ", "BRUNO ホットプレート"],
-      beauty: ["リファビューテックヘッドスパ", "YA-MAN フォトスチーマー", "Aesop レスレクション"],
-      fashion: ["アークテリクス マンティス2", "ビルケンシュトック アリゾナ", "パタゴニア ライトウェイト"],
-      "books-games": ["独学エンジニア大全", "ペルソナ5 ザ・ロイヤル", "モンスターハンターワイルズ"]
-    };
-
-    const targetList = sampleProductPrompts[randomCat.slug] || ["ベストセラー製品"];
-    const randomProduct = targetList[Math.floor(Math.random() * targetList.length)];
-    const customTitleFormat = `【最新実機レビュー】QOL高まる決定版「${randomProduct}」を専門家が徹底検証`;
-
-    pushLog(`[自動ボットスケジュール] クローラーが「${randomProduct}」の巡回抽出を開始。`, "info");
-
+  // Queue custom product for review (adds to stock_products)
+  const handleQueueProduct = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!queueAsin || !queueName) {
+      alert("ASINと商品名は必須です。");
+      return;
+    }
+    setQueueLoading(true);
     try {
-      const response = await fetch("/api/generate-amazon-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inputUrl: `https://www.amazon.co.jp/s?k=${encodeURIComponent(randomProduct)}`,
-          category: randomCat.slug,
-          associateId: state.associateId,
-          userCustomTitle: customTitleFormat
-        })
+      const resolvedAsin = queueAsin.trim().toUpperCase();
+      const resolvedLink = queueAffiliateLink.trim() || `https://www.amazon.co.jp/dp/${resolvedAsin}?tag=${state.associateId}`;
+      const resolvedPrice = queuePrice.trim() || "オープン価格";
+      const resolvedImg = queueImg.trim() || `https://picsum.photos/seed/${resolvedAsin}/400/300`;
+
+      await addProductToStockInFirestore({
+        asin: resolvedAsin,
+        name: queueName.trim(),
+        price: resolvedPrice,
+        img: resolvedImg,
+        affiliateLink: resolvedLink,
+        category: queueCategory
       });
 
-      if (!response.ok) throw new Error("Cron write failed");
-      const freshArticle: AmazonProductArticle = await response.json();
-
-      // Authorized check
-      if (isAuthorizedAdmin) {
-        await saveArticleToFirestore(freshArticle);
-      }
-
-      setState(prev => ({
-        ...prev,
-        articles: [freshArticle, ...prev.articles]
-      }));
-
-      pushLog(`[自律配信完了] 「${freshArticle.title}」が【${randomCat.name}】カテゴリーへ追加されました。`, "success");
-    } catch (err) {
-      console.error("Auto generation cron fail:", err);
-      pushLog("[自律配信エラー] タイムアウトまたはAPIレート上限制限のためスキップ。", "warn");
+      pushLog(`商品「${queueName}」（ASIN: ${resolvedAsin}）を自動レビュー生成待ちキューに追加しました。`, "success");
+      alert("レビュー執筆予約を登録しました！GitHub Actionsの次の実行時に執筆されます。");
+      
+      // Clear form
+      setQueueAsin('');
+      setQueueName('');
+      setQueuePrice('');
+      setQueueImg('');
+      setQueueAffiliateLink('');
+    } catch (err: any) {
+      console.error("Failed to queue product:", err);
+      alert(`キューへの追加中にエラーが発生しました。\nエラー詳細: ${err.message || err}`);
+    } finally {
+      setQueueLoading(false);
     }
   };
 
@@ -1207,7 +1158,7 @@ jobs:
                 </div>
 
                 {/* Dashboard Metrics Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
 
                   <div className="bg-zinc-950 border border-zinc-900 p-4 rounded-xl flex items-center gap-3.5">
                     <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-lg">
@@ -1245,88 +1196,178 @@ jobs:
                     </div>
                   </div>
 
-                  {/* Active Simulator Control widget */}
-                  <div className="bg-[#121115] border border-zinc-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="text-[9px] text-purple-400 font-bold tracking-widest block uppercase">定刻自動配信シミュレーター</span>
-                      <span className="text-[10px] text-zinc-500 block leading-normal pt-0.5 truncate">Actions自動追加の擬似再現</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const next = !state.simulatedCronActive;
-                        setState(prev => ({ ...prev, simulatedCronActive: next }));
-                        pushLog(next ? "自律型Actions自動クローラを駆動開始しました。" : "自動クローラを停止しました。", next ? "success" : "warn");
-                      }}
-                      className={`font-black text-[10px] px-3 py-1.5 rounded uppercase tracking-wider cursor-pointer flex-shrink-0 transition-all
-                        ${state.simulatedCronActive
-                          ? 'bg-amber-500 text-black shadow'
-                          : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800'
-                        }`}
-                    >
-                      {state.simulatedCronActive ? '稼働中' : '停止中'}
-                    </button>
-                  </div>
-
                 </div>
 
-                {/* Progress bar visualizer for cron simulation */}
-                {state.simulatedCronActive && (
-                  <div className="bg-[#12100a] border border-[#2f200c]/80 text-amber-300 p-3 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs text-left">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-amber-400 animate-spin flex-shrink-0" />
-                      <div>
-                        <strong className="font-bold uppercase">[自動運転巡回中]</strong>{' '}
-                        15秒を仮想の「1時間」とし、自律連携プログラムが自動的におすすめを執筆。各カテゴリーページへ新記事を配置しています。
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-[140px]">
-                      <div className="h-1.5 bg-zinc-900 w-full rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${autoGenProgress}%` }}></div>
-                      </div>
-                      <span className="font-mono text-[9px] text-zinc-400 flex-shrink-0">{autoGenProgress}%</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Main Double Grid: generation form and terminal / action manager */}
+                {/* Main Double Grid: CMS and Queue reservation form on Left, terminal / actions on Right */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
-                  {/* LEFT PANELS: CREATION ENGINE FOR REVIEWS (6 columns) */}
+                  {/* LEFT PANELS: CMS EDITOR & QUEUE ENGINES (6 columns) */}
                   <div className="lg:col-span-6 flex flex-col gap-6">
 
-                    {/* Review Generator Form */}
+                    {/* Review CMS Editor Form */}
                     <div className="bg-zinc-950 border border-zinc-900 p-5 sm:p-6 rounded-xl text-left space-y-4">
                       <div className="flex items-center gap-2 border-b border-zinc-900 pb-3">
-                        <Sparkles className="text-orange-500 w-5 h-5 flex-shrink-0" />
+                        <FileText className="text-orange-500 w-5 h-5 flex-shrink-0" />
                         <div>
-                          <h3 className="font-black text-white text-xs sm:text-sm">あまぞん GO!! 高機能AIレビュー執筆執動</h3>
-                          <p className="text-[10px] text-zinc-500">Google Gemini 3.5 Flashを安全に経由し、レビューカタログを随時自動量産</p>
+                          <h3 className="font-black text-white text-xs sm:text-sm">あまぞん GO!! 個別記事の文字修正CMS</h3>
+                          <p className="text-[10px] text-zinc-500">公開済みの個別記事の文章やリンクをご自身で自由に編集・修正できます</p>
                         </div>
                       </div>
 
-                      <form onSubmit={handleCreateNewArticle} className="space-y-4 text-xs">
+                      <form onSubmit={handleUpdateArticle} className="space-y-4 text-xs">
 
                         <div className="space-y-1.5">
                           <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
-                            商品名・製品キーワード（必須）
+                            修正する記事を選択（必須）
                           </label>
-                          <input
-                            type="text"
-                            value={inputUrl}
-                            onChange={(e) => setInputUrl(e.target.value)}
-                            placeholder="例: Sony WH-1000XM5"
-                            className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
-                          />
+                          <select
+                            value={selectedEditArticleId}
+                            onChange={(e) => setSelectedEditArticleId(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500 cursor-pointer"
+                          >
+                            <option value="">-- 記事を選択してください --</option>
+                            {resolvedArticles.map(art => (
+                              <option key={art.id} value={art.id}>
+                                [{art.category}] {art.title}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
+                        {selectedEditArticleId && (
+                          <>
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] text-zinc-401 uppercase tracking-widest font-black block">
+                                記事タイトル
+                              </label>
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                  評価スコア (4.0〜5.0)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="4.0"
+                                  max="5.0"
+                                  value={editStarRating}
+                                  onChange={(e) => setEditStarRating(parseFloat(e.target.value))}
+                                  className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                                />
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                  CTAボタン文言
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editCtaTitle}
+                                  onChange={(e) => setEditCtaTitle(e.target.value)}
+                                  className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                紹介導入文
+                              </label>
+                              <textarea
+                                rows={2}
+                                value={editIntroText}
+                                onChange={(e) => setEditIntroText(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                アフィリエイトリンク URL
+                              </label>
+                              <input
+                                type="text"
+                                value={editAffiliateLink}
+                                onChange={(e) => setEditAffiliateLink(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                詳細レビュー本文
+                              </label>
+                              <textarea
+                                rows={5}
+                                value={editReviewBody}
+                                onChange={(e) => setEditReviewBody(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white font-sans placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={cmsSaveLoading}
+                              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-black py-3 rounded-lg uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              {cmsSaveLoading ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                  CMSデータベース保存中...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-4 h-4 text-black" />
+                                  修正内容をデータベースに保存
+                                </>
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </form>
+                    </div>
+
+                    {/* Review Queue Reservation Form */}
+                    <div className="bg-zinc-950 border border-zinc-900 p-5 sm:p-6 rounded-xl text-left space-y-4">
+                      <div className="flex items-center gap-2 border-b border-zinc-900 pb-3">
+                        <Clock className="text-orange-500 w-5 h-5 flex-shrink-0" />
+                        <div>
+                          <h3 className="font-black text-white text-xs sm:text-sm">自動レビュー執筆の予約（キュー追加）</h3>
+                          <p className="text-[10px] text-zinc-500">任意の商品のASINや名称を登録すると、GitHub Actionsが自動巡回時に執筆します</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleQueueProduct} className="space-y-4 text-xs">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
-                              配置宛先カテゴリー
+                              ASINコード（必須）
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={queueAsin}
+                              onChange={(e) => setQueueAsin(e.target.value)}
+                              placeholder="例: B0CL7Y437Z"
+                              className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500 font-mono"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                              カテゴリー
                             </label>
                             <select
-                              value={inputCategory}
-                              onChange={(e) => setInputCategory(e.target.value)}
+                              value={queueCategory}
+                              onChange={(e) => setQueueCategory(e.target.value)}
                               className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500 cursor-pointer"
                             >
                               {AMAZON_CATEGORIES.map(cat => (
@@ -1336,53 +1377,84 @@ jobs:
                               ))}
                             </select>
                           </div>
+                        </div>
 
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                            商品名・製品キーワード（必須）
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={queueName}
+                            onChange={(e) => setQueueName(e.target.value)}
+                            placeholder="例: Apple AirPods Pro"
+                            className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[9px] text-zinc-401 uppercase tracking-widest font-black block">
-                              タイトルカスタム指定（任意）
+                            <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                              参考価格（任意）
                             </label>
                             <input
                               type="text"
-                              value={customTitle}
-                              onChange={(e) => setCustomTitle(e.target.value)}
-                              placeholder="例: 特別限定モデルなど"
-                              className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              value={queuePrice}
+                              onChange={(e) => setQueuePrice(e.target.value)}
+                              placeholder="例: ¥39,800"
+                              className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                              画像URL（任意）
+                            </label>
+                            <input
+                              type="text"
+                              value={queueImg}
+                              onChange={(e) => setQueueImg(e.target.value)}
+                              placeholder="https://images..."
+                              className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
                           <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
-                            アフィリエイトリンク / 短縮URL（必須）
+                            アフィリエイトリンク URL（任意、省略時は自動署名DPリンク）
                           </label>
                           <input
                             type="text"
-                            value={customAffiliateLink}
-                            onChange={(e) => setCustomAffiliateLink(e.target.value)}
-                            placeholder="例: https://amzn.to/4fZYn2T"
-                            className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
+                            value={queueAffiliateLink}
+                            onChange={(e) => setQueueAffiliateLink(e.target.value)}
+                            placeholder="例: https://www.amazon.co.jp/dp/..."
+                            className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white focus:outline-none focus:border-orange-500 font-mono"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          disabled={generationLoading}
-                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black font-black py-3 rounded-lg uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          disabled={queueLoading}
+                          className="w-full bg-[#1b1b24] hover:bg-[#272733] text-orange-400 font-black py-3 rounded-lg border border-orange-500/20 hover:border-orange-500/40 uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          {generationLoading ? (
+                          {queueLoading ? (
                             <>
                               <RefreshCw className="w-4 h-4 animate-spin" />
-                              高コンバージョン記事・アフィリンク作成中...
+                              キュー登録中...
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-4 h-4 text-black" />
-                              レビュー記事の自動パブリッシュを実行
+                              <Clock className="w-4 h-4 text-orange-400" />
+                              この商品を執筆キューに登録する
                             </>
                           )}
                         </button>
                       </form>
                     </div>
+
+
 
                     {/* ID Control Settings & Reset Panel */}
                     <div className="bg-zinc-950 border border-zinc-900 p-5 sm:p-6 rounded-xl text-left space-y-4">
