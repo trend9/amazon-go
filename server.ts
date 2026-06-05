@@ -17,21 +17,25 @@ app.use(express.json());
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+const db = getFirestore(firebaseApp);
 
 function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
-  const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-  const timestamp = new Date().toLocaleTimeString();
-  setDoc(doc(db, 'system_logs', id), {
-    id,
-    timestamp,
-    message,
-    type,
-    createdAt: new Date().toISOString()
-  }).catch((err) => {
-    console.error("Failed to write log to Firestore:", err);
-  });
-  console.log(`[${type.toUpperCase()}] ${message}`);
+  try {
+    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    const timestamp = new Date().toLocaleTimeString();
+    setDoc(doc(db, 'system_logs', id), {
+      id,
+      timestamp,
+      message,
+      type,
+      createdAt: new Date().toISOString()
+    }).catch((err) => {
+      console.error("Failed to write log to Firestore:", err);
+    });
+    console.log(`[${type.toUpperCase()}] ${message}`);
+  } catch (err) {
+    console.error("Failed inside pushLog:", err);
+  }
 }
 
 // Initialize server-side Gemini client

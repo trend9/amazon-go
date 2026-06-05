@@ -10,7 +10,7 @@ dotenv.config();
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const db = getFirestore(app);
 
 // Initialize Gemini
 let ai: GoogleGenAI | null = null;
