@@ -141,8 +141,8 @@ export default function App() {
   // Is Admin Route check
   const isAdminRoute = currentPath === '/host' || window.location.hash === '#/host' || window.location.search.includes('host');
 
-  // Authorized Admin check (Supports both legacy and new emails)
-  const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com' || authUser?.email === 'mattan0290c@gmail.com';
+  // Authorized Admin check
+  const isAuthorizedAdmin = authUser?.email === 'mattan029@gmail.com';
 
   // Push log function (only rendered on admin console panel)
   const pushLog = (message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') => {
@@ -163,7 +163,7 @@ export default function App() {
       setAuthUser(user);
       setAuthLoading(false);
       if (user) {
-        if (user.email === 'mattan029@gmail.com' || user.email === 'mattan0290c@gmail.com') {
+        if (user.email === 'mattan029@gmail.com') {
           pushLog(`管理者 [${user.email}] が認証に成功しました。`, 'success');
         } else {
           pushLog(`認証完了アカウント: ${user.email} (アクセス権限なし)`, 'warn');
@@ -1085,6 +1085,14 @@ jobs:
                   <LogIn className="w-4 h-4 text-black" />
                   Google 認証でサインイン
                 </button>
+
+                {/* Debug Session Info Helper */}
+                <div className="mt-4 text-[10px] text-zinc-600 space-y-1 font-mono text-left bg-[#0c0c0e]/80 p-3 rounded-xl border border-zinc-900">
+                  <p className="text-orange-400 font-bold uppercase tracking-wider text-[9px] mb-1">🔧 接続デバッグ情報</p>
+                  <p>状態: {authLoading ? "読み込み中..." : "接続済み"}</p>
+                  <p>アカウント: {authUser ? authUser.email : "未ログイン"}</p>
+                  <p>管理権限判定: {isAuthorizedAdmin ? "許可 (Admin)" : "拒否 (Unauthorized)"}</p>
+                </div>
               </div>
             ) : !isAuthorizedAdmin ? (
               <div className="max-w-md mx-auto my-12 bg-zinc-950 border border-zinc-900 p-8 rounded-2xl text-center space-y-6">
