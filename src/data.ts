@@ -83,7 +83,7 @@ export const INITIAL_ARTICLES: AmazonProductArticle[] = [
 #### 3. テレワークを支える最強のマイク
 AI技術を用いた通話補正アルゴリズムにより、騒がしいスターバックスの中からでも「静かでクリアな声」をクライアントへ届けます。`,
     ctaTitle: '＼ 限定ポイント還元あり！Amazonで現在の最安値と口コミをチェックする ／',
-    affiliateLink: 'https://www.amazon.co.jp/dp/B09Y29G7B2?tag=amazongo-22',
+    affiliateLink: 'https://www.amazon.co.jp/dp/B09Y29G7B2?tag=mattan0290c-22',
     createdAt: '2026-06-05 02:00:22',
     estimatedPV: 382,
     clicks: 45,
@@ -124,7 +124,7 @@ HHKB HYBRID Type-Sは、**「タイピングという行為そのものをエン
 #### 💻 デスクがすっきり片付く超ミニマル設計
 無駄な余白を完璧にカットした極限コンパクト。マウスとの距離が圧倒的に近くなり、腕の疲れを大幅に削減します。持ち運びやすさも抜群で、カフェやコワーキングスペース、自宅すべてを同一の入力環境へとシームレスに変更できます。`,
     ctaTitle: '＼ 高ポイント還元キャンペーン実施中！今すぐAmazonで在庫を見る ＼',
-    affiliateLink: 'https://www.amazon.co.jp/dp/B082TFTZCS?tag=amazongo-22',
+    affiliateLink: 'https://www.amazon.co.jp/dp/B082TFTZCS?tag=mattan0290c-22',
     createdAt: '2026-06-05 01:12:40',
     estimatedPV: 219,
     clicks: 18,
@@ -165,7 +165,7 @@ HHKB HYBRID Type-Sは、**「タイピングという行為そのものをエン
 #### 2. 無水調理が引き出す、調味料パウダー半分の極上料理
 本当にトマトとタマネギだけで、ルー不要に近い濃厚絶品無水カレーが仕上がります。健康的かつプロ顔負けのコクが味わえるため、外食の頻度が激減し、結果的にお財布にも体に優しい生活になります。`,
     ctaTitle: '＼ 超優良ライフチェンジ調理器具。Amazonのタイムセール特価と評価を確認する ／',
-    affiliateLink: 'https://www.amazon.co.jp/dp/B09CGLH7PP?tag=amazongo-22',
+    affiliateLink: 'https://www.amazon.co.jp/dp/B09CGLH7PP?tag=mattan0290c-22',
     createdAt: '2026-06-04 18:30:15',
     estimatedPV: 541,
     clicks: 64,

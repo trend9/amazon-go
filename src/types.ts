@@ -36,7 +36,7 @@ export interface SystemLog {
 }
 
 export interface AmazonGoState {
-  associateId: string; // e.g. "amazongo-22"
+  associateId: string; // e.g. "mattan0290c-22"
   fallbackAdUrl: string; // Default redirection link
   activeCategorySlug: string; // "all" or specific
   articles: AmazonProductArticle[];

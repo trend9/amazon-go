@@ -84,7 +84,7 @@ app.post("/api/generate-amazon-review", async (req, res) => {
   const { inputUrl, category, associateId, userCustomTitle } = req.body;
 
   const targetCategory = category || "gadgets";
-  const userTag = associateId || "amazongo-22";
+  const userTag = associateId || "mattan0290c-22";
 
   // Helper patterns for extraction
   // Extract ASIN as well if possible e.g. B0xxxxxx from URL

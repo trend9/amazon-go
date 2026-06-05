@@ -1,20 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithRedirect, 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
   signOut,
   onAuthStateChanged,
-  User 
+  User
 } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  getDocs, 
-  setDoc, 
-  deleteDoc, 
-  query, 
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
@@ -81,12 +81,12 @@ export function subscribeToArticles(
     snapshot.forEach((docSnap) => {
       articlesList.push(docSnap.data() as AmazonProductArticle);
     });
-    
+
     // Sort by createdAt descending
     articlesList.sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    
+
     onUpdate(articlesList);
   }, (err) => {
     console.error('Firestore real-time subscription error:', err);
@@ -126,7 +126,7 @@ export function subscribeToSettings(
     if (docSnap.exists()) {
       const data = docSnap.data();
       onUpdate({
-        associateId: data.associateId || 'amazongo-22',
+        associateId: data.associateId || 'mattan0290c-22',
         fallbackAdUrl: data.fallbackAdUrl || 'https://www.amazon.co.jp',
       });
     }

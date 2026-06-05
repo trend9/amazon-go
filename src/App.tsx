@@ -80,7 +80,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          associateId: parsed.associateId || 'amazongo-22',
+          associateId: parsed.associateId || 'mattan0290c-22',
           fallbackAdUrl: parsed.fallbackAdUrl || 'https://www.amazon.co.jp',
           activeCategorySlug: parsed.activeCategorySlug || 'all',
           articles: Array.isArray(parsed.articles) ? parsed.articles : INITIAL_ARTICLES,
@@ -94,7 +94,7 @@ export default function App() {
     }
 
     return {
-      associateId: 'amazongo-22',
+      associateId: 'mattan0290c-22',
       fallbackAdUrl: 'https://www.amazon.co.jp',
       activeCategorySlug: 'all',
       articles: INITIAL_ARTICLES,
@@ -111,7 +111,7 @@ export default function App() {
   // UI States
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Admin Form variables
   const [inputUrl, setInputUrl] = useState('');
   const [inputCategory, setInputCategory] = useState('gadgets');
@@ -350,7 +350,7 @@ export default function App() {
       setInputUrl('');
       setCustomTitle('');
       pushLog(`新規投稿されました！「${freshArticle.title}」が公開フィードに同期されました。`, "success");
-      
+
       // Navigate to public view to preview
       navigateTo('/');
     } catch (err) {
@@ -421,7 +421,7 @@ export default function App() {
       if (isAuthorizedAdmin) {
         await deleteArticleFromFirestore(id);
       }
-      
+
       setState(prev => ({
         ...prev,
         articles: prev.articles.filter(a => a.id !== id)
@@ -449,11 +449,11 @@ export default function App() {
         }
         // Re-seed default values
         await seedArticlesIfEmpty(INITIAL_ARTICLES);
-        await saveSettingsToFirestore('amazongo-22', 'https://www.amazon.co.jp');
+        await saveSettingsToFirestore('mattan0290c-22', 'https://www.amazon.co.jp');
       }
 
       setState({
-        associateId: 'amazongo-22',
+        associateId: 'mattan0290c-22',
         fallbackAdUrl: 'https://www.amazon.co.jp',
         activeCategorySlug: 'all',
         articles: INITIAL_ARTICLES,
@@ -560,8 +560,8 @@ jobs:
   // Filter articles by active category slug and search queries
   const filteredArticles = resolvedArticles.filter(art => {
     const categoryMatches = state.activeCategorySlug === 'all' || art.category === state.activeCategorySlug;
-    const queryMatches = !searchQuery.trim() || 
-      art.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const queryMatches = !searchQuery.trim() ||
+      art.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       art.reviewBody.toLowerCase().includes(searchQuery.toLowerCase()) ||
       art.asin.toLowerCase().includes(searchQuery.toLowerCase());
     return categoryMatches && queryMatches;
@@ -653,12 +653,12 @@ jobs:
       <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-orange-500/5 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className="w-full max-w-[1380px] bg-[#0c0c0e] border border-zinc-900 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col gap-6 relative shadow-[0_24px_80px_rgba(0,0,0,0.85)] max-h-none">
-        
+
         {/* ==================================================================== */}
         {/* ================ HEADER COMPONENT: PATHWAY ROUTER ================= */}
         {/* ==================================================================== */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-zinc-900 pb-5 gap-4">
-          
+
           {/* Logo & Category Slogan */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
@@ -670,9 +670,9 @@ jobs:
                 {isAdminRoute ? "AMAZON GO HOST MANAGER SECURITY CORE" : "CURATED SHOPPING EXPERT REVIEWS"}
               </span>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-3">
-              <div 
+              <div
                 onClick={() => navigateTo('/')}
                 className="bg-zinc-900 text-amber-500 border border-zinc-800/80 font-black text-xl sm:text-2xl md:text-3xl px-3.5 py-1 rounded-lg tracking-tighter flex items-center gap-1.5 hover:border-amber-500/40 cursor-pointer shadow-inner transition-all"
               >
@@ -704,10 +704,10 @@ jobs:
         {/* ==================================================================== */}
         {!isAdminRoute && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1">
-            
+
             {/* LEFT CONTAINER: LIST FILTERS & SEARCH (3 columns) */}
             <div className="col-span-1 lg:col-span-3 flex flex-col gap-4">
-              
+
               {/* Refinement Search input */}
               <div className="relative">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5 sm:top-3.5" />
@@ -792,7 +792,7 @@ jobs:
 
             {/* RIGHT MAIN VIEWPORT: FEED SPILTTER (9 columns) */}
             <div className="col-span-1 lg:col-span-9 grid grid-cols-1 md:grid-cols-12 gap-6">
-              
+
               {/* LIST FEED AREA (Left panel of sub division) */}
               <div className={`${selectedArticleId ? 'md:col-span-4' : 'md:col-span-12'} flex flex-col gap-4 overflow-y-auto max-h-[820px] pr-1 custom-scrollbar`}>
                 <div className="flex justify-between items-center bg-zinc-950/30 p-2.5 rounded-lg border border-zinc-900/50">
@@ -802,7 +802,7 @@ jobs:
                       {filteredArticles.length}
                     </span>
                   </h3>
-                  
+
                   {state.activeCategorySlug !== 'all' && (
                     <span className="text-[9px] sm:text-xs text-orange-400 font-bold bg-orange-500/5 px-2 py-0.5 rounded border border-orange-500/10">
                       {AMAZON_CATEGORIES.find(c => c.slug === state.activeCategorySlug)?.name}
@@ -842,7 +842,7 @@ jobs:
                               <span className="text-[8px] sm:text-[10px] text-[#FF9900] font-mono px-1.5 py-0.2 bg-orange-500/5 border border-orange-500/10 rounded uppercase tracking-wider mb-1 inline-block">
                                 {AMAZON_CATEGORIES.find(c => c.slug === art.category)?.name}
                               </span>
-                              
+
                               <h4 className={`text-xs sm:text-sm font-bold leading-snug line-clamp-2 transition-colors
                                 ${isCurrent ? 'text-orange-400' : 'text-zinc-300 group-hover:text-white'}`}>
                                 {art.title}
@@ -869,9 +869,9 @@ jobs:
               {/* ARTICLE FULL SPECIFICATION DEMONSTRATOR LIST (Right pane of sub division) */}
               {selectedArticle ? (
                 <div className="col-span-1 md:col-span-8 bg-zinc-900/30 border border-[#131317] rounded-xl p-5 md:p-6 flex flex-col text-left justify-between min-h-[500px]">
-                  
+
                   <div className="space-y-4">
-                    
+
                     {/* Header meta badges */}
                     <div className="flex flex-wrap items-center gap-3 border-b border-zinc-900/80 pb-4">
                       <span className="text-[10px] sm:text-xs bg-orange-500/10 text-orange-400 font-mono font-bold px-2 py-0.5 rounded border border-orange-500/20">
@@ -981,7 +981,7 @@ jobs:
                   {/* HIGH CTA ACTION BAR */}
                   <div className="mt-8 pt-6 border-t border-zinc-900 space-y-3">
                     <div className="bg-gradient-to-r from-orange-600/10 via-amber-500/10 to-orange-500/10 border border-orange-500/20 p-5 rounded-xl text-center shadow-md relative overflow-hidden group">
-                      
+
                       <span className="text-xs sm:text-sm text-amber-500 font-sans font-black tracking-widest block mb-2.5 px-1">
                         {selectedArticle.ctaTitle}
                       </span>
@@ -1037,7 +1037,7 @@ jobs:
         {/* ==================================================================== */}
         {isAdminRoute && (
           <div className="w-full">
-            
+
             {/* SUB-FLOW: GOOGLE AUTH REQUIREMENT SCREEN */}
             {authLoading ? (
               <div className="py-20 text-center flex flex-col items-center justify-center gap-4">
@@ -1114,10 +1114,10 @@ jobs:
                 </div>
               </div>
             ) : (
-              
+
               /* SUB-FLOW: LOGGED EXECUTOR PANEL (AUTHORIZED mattan029@gmail.com) */
               <div className="space-y-6">
-                
+
                 {/* Host User status block */}
                 <div className="bg-zinc-900/40 border border-zinc-900 rounded-xl p-4 flex flex-wrap justify-between items-center gap-4 text-xs font-sans">
                   <div className="flex items-center gap-3">
@@ -1150,7 +1150,7 @@ jobs:
 
                 {/* Dashboard Metrics Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
-                  
+
                   <div className="bg-zinc-950 border border-zinc-900 p-4 rounded-xl flex items-center gap-3.5">
                     <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-lg">
                       <DollarSign className="w-5 h-5" />
@@ -1232,10 +1232,10 @@ jobs:
 
                 {/* Main Double Grid: generation form and terminal / action manager */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                  
+
                   {/* LEFT PANELS: CREATION ENGINE FOR REVIEWS (6 columns) */}
                   <div className="lg:col-span-6 flex flex-col gap-6">
-                    
+
                     {/* Review Generator Form */}
                     <div className="bg-zinc-950 border border-zinc-900 p-5 sm:p-6 rounded-xl text-left space-y-4">
                       <div className="flex items-center gap-2 border-b border-zinc-900 pb-3">
@@ -1247,7 +1247,7 @@ jobs:
                       </div>
 
                       <form onSubmit={handleCreateNewArticle} className="space-y-4 text-xs">
-                        
+
                         <div className="space-y-1.5">
                           <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
                             Amazon 製品URL または 10桁のASIN識別子
@@ -1315,7 +1315,7 @@ jobs:
 
                     {/* ID Control Settings & Reset Panel */}
                     <div className="bg-zinc-950 border border-zinc-900 p-5 sm:p-6 rounded-xl text-left space-y-4">
-                      
+
                       <div className="flex items-center gap-2 border-b border-zinc-900 pb-3">
                         <Settings className="text-orange-500 w-5 h-5 flex-shrink-0" />
                         <div>
@@ -1333,7 +1333,7 @@ jobs:
                             type="text"
                             value={state.associateId}
                             onChange={(e) => {
-                              const v = e.target.value.trim() || 'amazongo-22';
+                              const v = e.target.value.trim() || 'mattan0290c-22';
                               // Update local config
                               setState(p => {
                                 const updated = p.articles.map(art => ({
@@ -1347,7 +1347,7 @@ jobs:
                               pushLog(`アソシエイトIDを [${v}] に書き換え、データベース連動を同期しました。`, "info");
                             }}
                             className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white font-mono focus:outline-none focus:border-orange-500"
-                            placeholder="amazongo-22"
+                            placeholder="mattan0290c-22"
                           />
                           <p className="text-[9px] text-zinc-500 leading-relaxed">
                             ※ここを本物のAmazonアソシエイトIDに変更すると、生成された全記事内のアフィリエイト購入ボタンの追跡コードが即座に同期されます。
@@ -1370,7 +1370,7 @@ jobs:
 
                   {/* RIGHT PANELS: GITHUB MANUALS AND SYSTEM CONSOLE LOGS (6 columns) */}
                   <div className="lg:col-span-6 flex flex-col gap-6">
-                    
+
                     {/* Real-time Simulator Console logs panel */}
                     <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 flex flex-col flex-1 min-h-[220px]">
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block border-b border-zinc-900 pb-2 mb-3 flex justify-between items-center">
