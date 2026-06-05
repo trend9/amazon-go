@@ -2,11 +2,6 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
-import fs from "fs";
-import { firebaseConfig } from "./firebase-config-static";
-
 dotenv.config();
 
 const app = express();
@@ -14,27 +9,33 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-
 function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai' = 'info') {
-  try {
-    const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-    const timestamp = new Date().toLocaleTimeString();
-    setDoc(doc(db, 'system_logs', id), {
-      id,
-      timestamp,
-      message,
-      type,
-      createdAt: new Date().toISOString()
-    }).catch((err) => {
-      console.error("Failed to write log to Firestore:", err);
-    });
-    console.log(`[${type.toUpperCase()}] ${message}`);
-  } catch (err) {
-    console.error("Failed inside pushLog:", err);
-  }
+  const projectId = "go-app-4dcb9";
+  const id = "log_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+  const timestamp = new Date().toLocaleTimeString();
+  const createdAt = new Date().toISOString();
+
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/system_logs?documentId=${id}`;
+
+  const body = {
+    fields: {
+      id: { stringValue: id },
+      timestamp: { stringValue: timestamp },
+      message: { stringValue: message },
+      type: { stringValue: type },
+      createdAt: { stringValue: createdAt }
+    }
+  };
+
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).catch((err) => {
+    console.error("REST log write error:", err);
+  });
+
+  console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
 // Initialize server-side Gemini client
