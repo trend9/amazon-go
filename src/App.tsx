@@ -165,6 +165,13 @@ export default function App() {
         } else {
           pushLog(`認証完了アカウント: ${user.email} (アクセス権限なし)`, 'warn');
         }
+
+        // Auto-restore redirect target page (e.g. /host) after successful auth redirect
+        const redirectTarget = localStorage.getItem('auth_redirect_target');
+        if (redirectTarget) {
+          localStorage.removeItem('auth_redirect_target');
+          navigateTo(redirectTarget);
+        }
       }
     });
 
@@ -286,6 +293,7 @@ export default function App() {
   // Google Login handling
   const handleGoogleLogin = async () => {
     try {
+      localStorage.setItem('auth_redirect_target', '/host');
       await loginWithGoogle();
     } catch (err: any) {
       console.error("Auth redirect failed:", err);
