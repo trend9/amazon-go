@@ -124,19 +124,37 @@ app.post("/api/generate-amazon-review", async (req, res) => {
   const userTag = associateId || "mattan0290c-22";
 
   // Helper patterns for extraction
-  // Extract ASIN as well if possible e.g. B0xxxxxx from URL
-  let detectedAsin = "B08N5WRWNW"; // Fallback ASIN
+  let detectedAsin = "";
+  let searchKeyword = "";
+
   const asinMatch = (inputUrl || "").match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/i);
+  const searchMatch = (inputUrl || "").match(/[?&]k=([^&]+)/i);
+
   if (asinMatch && asinMatch[2]) {
     detectedAsin = asinMatch[2].toUpperCase();
   } else if ((inputUrl || "").trim().length === 10 && /^[A-Z0-9]+$/i.test((inputUrl || "").trim())) {
     detectedAsin = (inputUrl || "").trim().toUpperCase();
+  } else if (searchMatch && searchMatch[1]) {
+    searchKeyword = decodeURIComponent(searchMatch[1]);
+  } else {
+    // Check if it's a plain keyword
+    const isUrl = (inputUrl || "").startsWith("http");
+    if (!isUrl && (inputUrl || "").trim().length > 0) {
+      searchKeyword = (inputUrl || "").trim();
+    }
+  }
+
+  // Fallback to active JP ASIN if neither is resolved
+  if (!detectedAsin && !searchKeyword) {
+    detectedAsin = "B0CL7Y437Z"; // Valid active Fire TV Stick ASIN
   }
 
   // Pre-configured link
   const finalAffLink = customAffiliateLink && customAffiliateLink.trim()
     ? customAffiliateLink.trim()
-    : `https://www.amazon.co.jp/dp/${detectedAsin}/ref=nosim?tag=${userTag}`;
+    : (detectedAsin 
+        ? `https://www.amazon.co.jp/dp/${detectedAsin}/ref=nosim?tag=${userTag}`
+        : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}&tag=${userTag}`);
 
   // Attempt to fetch product details from Amazon Creators API using LWA credentials
   let apiProductDetails: any = null;
@@ -180,8 +198,8 @@ app.post("/api/generate-amazon-review", async (req, res) => {
     return res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
       title: targetTitle,
-      originalUrl: inputUrl || `https://www.amazon.co.jp/dp/${detectedAsin}`,
-      asin: detectedAsin,
+      originalUrl: inputUrl || (detectedAsin ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}`),
+      asin: detectedAsin || "Search",
       category: targetCategory,
       imageUrl: finalImg,
       starRating: parseFloat((4.3 + Math.random() * 0.6).toFixed(1)),
@@ -287,8 +305,8 @@ Always output your entire response formatted as a strict single JSON object foll
     res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
       title: outputJson.title || "【今こそ買い】話題のAmazonベストセラー徹底個別レビュー",
-      originalUrl: inputUrl || `https://www.amazon.co.jp/dp/${detectedAsin}`,
-      asin: detectedAsin,
+      originalUrl: inputUrl || (detectedAsin ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}`),
+      asin: detectedAsin || "Search",
       category: targetCategory,
       imageUrl: finalImg,
       starRating: outputJson.starRating || 4.5,
