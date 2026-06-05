@@ -20,7 +20,7 @@ import {
   limit,
   onSnapshot
 } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import { firebaseConfig } from '../firebase-config-static';
 import { AmazonProductArticle } from './types';
 
 // Initialize Firebase App

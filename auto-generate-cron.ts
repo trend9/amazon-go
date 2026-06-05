@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import firebaseConfig from './firebase-applet-config.json';
+import { firebaseConfig } from './firebase-config-static';
 
 dotenv.config();
 

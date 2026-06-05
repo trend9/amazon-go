@@ -1,0 +1,10 @@
+export const firebaseConfig = {
+  projectId: "go-app-4dcb9",
+  appId: "1:598978476669:web:1922d9ad784010c27f0f14",
+  apiKey: "AIzaSyA5dDpMpJAN0cx3CtKdFwIZ7h564Uidng4",
+  authDomain: "go-app-4dcb9.firebaseapp.com",
+  firestoreDatabaseId: "(default)",
+  storageBucket: "go-app-4dcb9.firebasestorage.app",
+  messagingSenderId: "598978476669",
+  measurementId: "G-795Q6066FM"
+};
