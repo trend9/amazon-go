@@ -140,9 +140,9 @@ Always output your entire response formatted as a strict single JSON object matc
 
 JSON Schema:
 {
-  "title": "思わず目が留まる魅力的な日本語記事タイトル (string)",
+  "title": "読者の目を釘付けにし、検索流入を最大化する日本語記事タイトル。必ず『口コミ』『デメリット』『買ってよかった』『本音レビュー』のいずれか、もしくは複数を自然に含めてください。例:『【本音口コミ】[商品名]のデメリットと買ってよかった理由を徹底レビュー』 (string)",
   "starRating": 4.5, // 製品への評価点数 (number, 4.0から4.9までの小数)
-  "introText": "読者の心をつかむ冒頭引き込み文 (string, 80文字〜150文字程度)",
+  "introText": "読者の心をつかむ冒頭引き込み文。ここにも『デメリット』『買ってよかった』『口コミ』といったターゲットキーワードを自然に含めてください (string, 80文字〜150文字程度)",
   "features": ["特徴1", "特徴2", "特徴3"], // この製品が誇る主な売りポイント・際立つ特徴 3個 (array of strings)
   "pros": ["メリット1", "メリット2", "メリット3"], // 実際に手に入れて得られる強烈なメリット・良い点 3個 (array of strings)
   "cons": ["デメリット1", "デメリット2"], // 正直に伝えるデメリットや留意点 2個 (array of strings)
@@ -159,10 +159,11 @@ JSON Schema:
 - 自社アフィリエイトリンクURL (最終的な誘導先): "${affiliateLink}"
 
 【執筆アプローチ】
-1. 購買意欲を限界まで煽るタイトル（J-RATING誌、LDK誌、モノプロのようなプロの検証誌のような魅力的なもの）を考案。
-2. 特徴、実際に使って良かった点（メリット：3個）、購入前に知るべき注意点（デメリット：2個）、そして詳細なレビュー本文（見出し記号は一切使わず、読みやすい改行を多用した詳細なテキスト）を高熱量で書いてください。
-3. 信頼感を示すためのスター評価（4.0〜5.0の間）を選定してください。
-4. 最終的にリンクへと誘導するキャッチーな「CTA勧誘タイトル（CTAボタン用の文言）」を作成してください。
+1. SEOとクリック率(CTR)を極限まで高めるため、記事タイトル（title）には「本音レビュー」「口コミ」「デメリット」「買ってよかった」等のSEOターゲットキーワードを必ず含めてください。
+2. 冒頭引き込み文（introText）にも、「買ってよかった」や「デメリット」などの読者の検索意図に直接響く語句を自然に含めてください。
+3. 特徴、実際に使って良かった点（メリット：3個）、購入前に知るべき注意点（デメリット：2個）、そして詳細なレビュー本文（見出し記号は一切使わず、読みやすい改行を多用した詳細なテキスト）を高熱量で書いてください。
+4. 信頼感を示すためのスター評価（4.0〜5.0の間）を選定してください。
+5. 最終的にリンクへと誘導するキャッチーな「CTA勧誘タイトル（CTAボタン用の文言）」を作成してください。
 
 ※重要品質制限: 本文や特徴等のすべてのテキスト項目の中で、見出し文字(「#」「##」「###」等)や、アスタリスク(「*」)、コード用バックティック(「\`」)などのマークダウン特有 of テキストフォーマット表現文字は【絶対に】使わないでください。見出し部分は単なる一行のプレーンなテキスト段落として記述してください。`;
 
@@ -269,7 +270,7 @@ async function run() {
             asin: item.asin,
             name: item.name,
             price: item.price,
-            img: item.img,
+            img: `https://ws-fe.amazon-adsystem.com/widgets/q?_encoding=UTF8&Format=_SL600_&ASIN=${item.asin}&MarketPlace=JP&ID=AsinImage&WS=1&ServiceVersion=20070822`,
             affiliateLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
             category: cat
           });
@@ -326,7 +327,7 @@ async function run() {
           originalUrl: `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
           asin: dispatchProduct.asin,
           category: dispatchProduct.category,
-          imageUrl: dispatchProduct.img,
+          imageUrl: `https://ws-fe.amazon-adsystem.com/widgets/q?_encoding=UTF8&Format=_SL600_&ASIN=${dispatchProduct.asin}&MarketPlace=JP&ID=AsinImage&WS=1&ServiceVersion=20070822`,
           starRating: outputJson.starRating || 4.5,
           introText: outputJson.introText || "QOLが向上すると大ヒット中の商品。その実力を本音で評価します。",
           features: outputJson.features || ["高速動作", "長寿命設計", "ギフトにも最適"],

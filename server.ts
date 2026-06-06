@@ -634,7 +634,9 @@ app.post("/api/generate-amazon-review", async (req, res) => {
     console.warn("Amazon API fetch failed or was skipped:", apiErr);
   }
 
-  let finalImg = selectProductMockImage(targetCategory, userCustomTitle || searchKeyword || inputUrl || detectedAsin || "product");
+  let finalImg = detectedAsin
+    ? `https://ws-fe.amazon-adsystem.com/widgets/q?_encoding=UTF8&Format=_SL600_&ASIN=${detectedAsin}&MarketPlace=JP&ID=AsinImage&WS=1&ServiceVersion=20070822`
+    : selectProductMockImage(targetCategory, userCustomTitle || searchKeyword || inputUrl || "product");
 
   if (!isAiEnabled) {
     const defaultTitles: Record<string, string> = {

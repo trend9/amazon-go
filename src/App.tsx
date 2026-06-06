@@ -70,6 +70,117 @@ function cleanMarkdownHeaders(text: string): string {
     .replace(/`{1,}/g, "");  // Backticks
 }
 
+// Automated Semantic Internal Linker
+function renderReviewBodyWithLinks(
+  bodyText: string,
+  articles: AmazonProductArticle[],
+  currentArticleId: string,
+  onNavigate: (path: string) => void
+) {
+  if (!bodyText) return null;
+  const cleanText = cleanMarkdownHeaders(bodyText);
+
+  // Define keyword-to-ASIN mapping
+  const keywordMappings: { keyword: string; asin: string }[] = [
+    { keyword: "WH-1000XM5", asin: "B09Y2MYLMC" },
+    { keyword: "WH-1000XM5", asin: "B0D2XBV7FZ" }, // Include seed article ASIN
+    { keyword: "QuietComfort", asin: "B0CH191KNC" },
+    { keyword: "TOUR PRO 2", asin: "B0BVB5LBDD" },
+    { keyword: "LinkBuds S", asin: "B09Y5C27F7" },
+    { keyword: "Space Q45", asin: "B0B5G82F58" },
+    { keyword: "Osmo Pocket 3", asin: "B0CG1TNYR3" },
+    { keyword: "iPad Air", asin: "B0D3J5VNDG" },
+    { keyword: "Liberty 4", asin: "B0BG5B5Q95" },
+    { keyword: "OpenRun Pro", asin: "B09M2P5978" },
+    { keyword: "HHKB", asin: "B082TTR5C1" },
+    { keyword: "MX Master 3S", asin: "B0B1D4Y7S3" },
+    { keyword: "990 PRO", asin: "B0BMQ24C1B" },
+    { keyword: "Prime Wall Charger", asin: "B0C5HVYCDT" },
+    { keyword: "UltraGear", asin: "B0BYMJWCSK" },
+    { keyword: "Dell U2723QE", asin: "B09TDFM7J8" },
+    { keyword: "SUPERLIGHT 2", asin: "B0CGDCL14L" },
+    { keyword: "Apex Pro TKL", asin: "B0BD5Q5L62" },
+    { keyword: "Stream Deck", asin: "B09738CV2G" },
+    { keyword: "ホットクック", asin: "B09C15CR9P" },
+    { keyword: "バルミューダ", asin: "B08FPCSBFR" },
+    { keyword: "デロンギ", asin: "B008ZZFCAI" },
+    { keyword: "シロカ", asin: "B07JH8XQJ2" },
+    { keyword: "電気圧力鍋", asin: "B085VNDM5H" },
+    { keyword: "ソーダストリーム", asin: "B09NSN7B8H" },
+    { keyword: "クックフォーミー", asin: "B0761HM28B" },
+    { keyword: "アラジン", asin: "B07HQCHZ3B" },
+    { keyword: "ナノケア", asin: "B0B7H8MC5M" },
+    { keyword: "リファ ビューテック", asin: "B0B824BKB7" },
+    { keyword: "フォトシャイン", asin: "B08KH6C7F1" },
+    { keyword: "シルクエキスパート", asin: "B09M8FLRPQ" },
+    { keyword: "プラチナローラー", asin: "B0182C317U" },
+    { keyword: "サロニア", asin: "B08K7G5T5N" },
+    { keyword: "ダイソン", asin: "B09H2S5N6G" },
+    { keyword: "バイタリフト", asin: "B0B4DBP2S9" },
+    { keyword: "アークテリクス", asin: "B0B5F4KV4B" },
+    { keyword: "ブラックホール", asin: "B07PBFYL36" },
+    { keyword: "シングルショット", asin: "B07MGB563Q" },
+    { keyword: "ビルケンシュトック", asin: "B000GLNQRE" },
+    { keyword: "ニューバランス", asin: "B07MLYV64R" },
+    { keyword: "トレントシェル", asin: "B083M12D8J" },
+    { keyword: "マウンテンライトジャケット", asin: "B07MGB26V1" },
+    { keyword: "グレゴリー", asin: "B00M0N4K5I" },
+    { keyword: "モンスターハンター", asin: "B0DGWYDRM4" },
+    { keyword: "ゼルダの伝説", asin: "B0BVMNV15D" },
+    { keyword: "ペルソナ5", asin: "B0B68WNDR9" },
+    { keyword: "マリオカート", asin: "B06XZ1178K" },
+    { keyword: "マリオブラザーズ", asin: "B0C9J6MWRY" },
+    { keyword: "桃太郎電鉄", asin: "B0C9J9K4CR" },
+  ];
+
+  // Resolve matching articles in db. We only keep those that exist in `articles` and are not the current one.
+  const activeMatches: { keyword: string; articleId: string }[] = [];
+  for (const mapping of keywordMappings) {
+    const matchedArt = articles.find(
+      (a) => a.id !== currentArticleId && a.asin.toLowerCase() === mapping.asin.toLowerCase()
+    );
+    if (matchedArt) {
+      activeMatches.push({ keyword: mapping.keyword, articleId: matchedArt.id });
+    }
+  }
+
+  if (activeMatches.length === 0) {
+    return <>{cleanText}</>;
+  }
+
+  // Sort keywords by length desc to avoid substring collisions
+  activeMatches.sort((a, b) => b.keyword.length - a.keyword.length);
+
+  // Build a regex of all keywords
+  const escapedKeywords = activeMatches.map((m) => m.keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"));
+  const regex = new RegExp(`(${escapedKeywords.join("|")})`, "g");
+
+  const parts = cleanText.split(regex);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const match = activeMatches.find((m) => m.keyword === part);
+        if (match) {
+          return (
+            <a
+              key={index}
+              href={`/review/${match.articleId}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(`/review/${match.articleId}`);
+              }}
+              className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors"
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+}
+
 export default function App() {
   // Navigation / Route state
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
@@ -814,7 +925,7 @@ jobs:
                   <div className="border-t border-zinc-900 pt-6 mt-4 space-y-3">
                     <span className="text-xs text-zinc-500 font-mono font-bold uppercase tracking-widest block">実機レビュー検証記録</span>
                     <div className="text-sm sm:text-base text-zinc-200 leading-relaxed space-y-4 pr-1 border-l border-zinc-800 pl-4 whitespace-pre-line font-sans">
-                      {cleanMarkdownHeaders(reviewArticle.reviewBody)}
+                      {renderReviewBodyWithLinks(reviewArticle.reviewBody, resolvedArticles, reviewArticle.id, navigateTo)}
                     </div>
                   </div>
 
