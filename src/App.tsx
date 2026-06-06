@@ -268,6 +268,9 @@ export default function App() {
   const [dbArticles, setDbArticles] = useState<AmazonProductArticle[]>([]);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
 
+  // Combine Firestore subscription list with initial state list beautifully
+  const resolvedArticles = isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles;
+
   // UI States
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,6 +278,7 @@ export default function App() {
   // CMS Editor states
   const [selectedEditArticleId, setSelectedEditArticleId] = useState<string>('');
   const [editTitle, setEditTitle] = useState<string>('');
+  const [editImageUrl, setEditImageUrl] = useState<string>('');
   const [editStarRating, setEditStarRating] = useState<number>(4.5);
   const [editIntroText, setEditIntroText] = useState<string>('');
   const [editReviewBody, setEditReviewBody] = useState<string>('');
@@ -447,6 +451,28 @@ export default function App() {
     }
   }, [state]);
 
+  // Synchronize CMS form values when selected article changes
+  useEffect(() => {
+    const art = resolvedArticles.find(a => a.id === selectedEditArticleId);
+    if (art) {
+      setEditTitle(art.title || '');
+      setEditImageUrl(art.imageUrl || '');
+      setEditStarRating(art.starRating || 4.5);
+      setEditIntroText(art.introText || '');
+      setEditReviewBody(art.reviewBody || '');
+      setEditCtaTitle(art.ctaTitle || '');
+      setEditAffiliateLink(art.affiliateLink || '');
+    } else {
+      setEditTitle('');
+      setEditImageUrl('');
+      setEditStarRating(4.5);
+      setEditIntroText('');
+      setEditReviewBody('');
+      setEditCtaTitle('');
+      setEditAffiliateLink('');
+    }
+  }, [selectedEditArticleId, resolvedArticles]);
+
 
 
   // Google Login handling
@@ -487,6 +513,7 @@ export default function App() {
       const updatedArticle: AmazonProductArticle = {
         ...art,
         title: editTitle,
+        imageUrl: editImageUrl,
         starRating: Number(editStarRating),
         introText: editIntroText,
         reviewBody: editReviewBody,
@@ -704,8 +731,7 @@ jobs:
     });
   };
 
-  // Combine Firestore subscription list with initial state list beautifully
-  const resolvedArticles = isDbLoaded && dbArticles.length > 0 ? dbArticles : state.articles;
+
 
   // Is Review Route check
   const isReviewRoute = currentPath.startsWith('/review/');
@@ -1434,6 +1460,18 @@ jobs:
                                 value={editIntroText}
                                 onChange={(e) => setEditIntroText(e.target.value)}
                                 className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] text-zinc-400 uppercase tracking-widest font-black block">
+                                画像 URL
+                              </label>
+                              <input
+                                type="text"
+                                value={editImageUrl}
+                                onChange={(e) => setEditImageUrl(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 rounded-lg text-white placeholder-zinc-700 focus:outline-none focus:border-orange-500"
                               />
                             </div>
 

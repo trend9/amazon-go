@@ -2,7 +2,7 @@ name: "あまぞん GO!! 3時間おきレビュー自動配信"
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # 3時間おきに実行
+    - cron: '0 * * * *' # 1時間おきに実行
   workflow_dispatch: # 手動実行可能
 
 jobs:
