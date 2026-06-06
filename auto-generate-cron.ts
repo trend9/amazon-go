@@ -322,10 +322,17 @@ async function run() {
 
         const freshArticleId = "art_" + Math.random().toString(36).substring(2, 11);
 
+        const isSony = dispatchProduct.asin === "B0D2XBV7FZ" || dispatchProduct.asin === "B09Y2MYLMC";
+        const finalAffLink = isSony
+          ? "https://amzn.to/4fZYn2T"
+          : ((dispatchProduct.affiliateLink || "").includes('/dp/') || !(dispatchProduct.affiliateLink || "").includes('/s?k='))
+            ? `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}&tag=${tag}`
+            : dispatchProduct.affiliateLink;
+
         const freshArticle = {
           id: freshArticleId,
           title: outputJson.title || `【最新実機レビュー】QOL高まる決定版「${dispatchProduct.name}」を徹底検証`,
-          originalUrl: `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
+          originalUrl: isSony ? `https://www.amazon.co.jp/dp/${dispatchProduct.asin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
           asin: dispatchProduct.asin,
           category: dispatchProduct.category,
           imageUrl: dispatchProduct.img || `https://picsum.photos/seed/${dispatchProduct.asin}/400/300`,
@@ -336,7 +343,7 @@ async function run() {
           cons: outputJson.cons || ["カラーバリエーションが少ないこと", "初期設定に少々時間が必要"],
           reviewBody: outputJson.reviewBody || "確かな機能性。実際に日々使ってみての感想を共有します。",
           ctaTitle: outputJson.ctaTitle || "＼ Amazon最速今日〜明日にお届け。現在の最安値とクチコミを見る ／",
-          affiliateLink: dispatchProduct.affiliateLink,
+          affiliateLink: finalAffLink,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
           estimatedPV: 0,
           clicks: 0,
