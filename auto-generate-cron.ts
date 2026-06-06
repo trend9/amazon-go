@@ -266,12 +266,13 @@ async function run() {
 
           if (isDuplicate) continue;
 
+          const isSony = item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ";
           refillPool.push({
             asin: item.asin,
             name: item.name,
             price: item.price,
             img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
-            affiliateLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
+            affiliateLink: isSony ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
             category: cat
           });
           itemsAddedForCat++;

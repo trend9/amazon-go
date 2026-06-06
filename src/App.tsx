@@ -553,7 +553,10 @@ export default function App() {
     setQueueLoading(true);
     try {
       const resolvedAsin = queueAsin.trim().toUpperCase();
-      const resolvedLink = queueAffiliateLink.trim() || `https://www.amazon.co.jp/dp/${resolvedAsin}/ref=nosim?tag=${state.associateId}`;
+      const isSony = resolvedAsin === "B0D2XBV7FZ" || resolvedAsin === "B09Y2MYLMC";
+      const resolvedLink = queueAffiliateLink.trim() || (isSony
+        ? "https://amzn.to/4fZYn2T"
+        : `https://www.amazon.co.jp/s?k=${encodeURIComponent(queueName.trim())}&tag=${state.associateId}`);
       const resolvedPrice = queuePrice.trim() || "オープン価格";
       const resolvedImg = queueImg.trim() || `https://picsum.photos/seed/${resolvedAsin}/400/300`;
 

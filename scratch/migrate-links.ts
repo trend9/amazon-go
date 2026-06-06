@@ -94,6 +94,11 @@ async function migrate() {
     const currentLink = data.affiliateLink || "";
     const asin = (data.asin || "").toUpperCase();
     
+    if (asin === "B0D2XBV7FZ" || asin === "B09Y2MYLMC" || currentLink.includes("amzn.to")) {
+      console.log(`Skipping Sony headphones/shortlink migration for [${docSnap.id}]: "${data.title}"`);
+      continue;
+    }
+    
     // Check if the link is a direct /dp/ ASIN link
     if (currentLink.includes('/dp/') || !currentLink.includes('/s?k=')) {
       console.log(`Migrating article [${docSnap.id}]: "${data.title}"`);

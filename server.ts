@@ -604,11 +604,7 @@ app.post("/api/generate-amazon-review", async (req, res) => {
     detectedAsin = "B0CL7Y437Z";
   }
 
-  const finalAffLink = customAffiliateLink && customAffiliateLink.trim()
-    ? customAffiliateLink.trim()
-    : (detectedAsin 
-        ? `https://www.amazon.co.jp/dp/${detectedAsin}/ref=nosim?tag=${userTag}`
-        : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}&tag=${userTag}`);
+
 
   // Attempt to fetch product details from Amazon Creators API using LWA credentials
   let apiProductDetails: any = null;
@@ -649,6 +645,14 @@ app.post("/api/generate-amazon-review", async (req, res) => {
     finalImg = selectProductMockImage(targetCategory, detectedAsin || userCustomTitle || searchKeyword || inputUrl || "product");
   }
 
+  const resolvedSearchKeyword = apiProductDetails?.title || searchKeyword || userCustomTitle || inputUrl || "Amazon売れ筋";
+  const isSony = detectedAsin === "B0D2XBV7FZ" || detectedAsin === "B09Y2MYLMC";
+  const finalAffLink = customAffiliateLink && customAffiliateLink.trim()
+    ? customAffiliateLink.trim()
+    : (isSony
+        ? `https://amzn.to/4fZYn2T`
+        : `https://www.amazon.co.jp/s?k=${encodeURIComponent(resolvedSearchKeyword)}&tag=${userTag}`);
+
   if (!isAiEnabled) {
     const defaultTitles: Record<string, string> = {
       gadgets: "【超高音質】JBL Tour Pro 2はスマートタッチ画面付きで驚愕の便利さ！徹底時短レビュー",
@@ -659,12 +663,12 @@ app.post("/api/generate-amazon-review", async (req, res) => {
       "books-games": "【神ゲー確定】エルデンリング(ELDEN RING)を100時間遊び尽くした完全攻略レビュー"
     };
 
-    const targetTitle = userCustomTitle || defaultTitles[targetCategory] || "【超人気アイテム】話題のAmazon売れ筋商品をプロ目線で徹底レビュー";
+    const targetTitle = userCustomTitle || defaultTitles[targetCategory] || "【超人気アイテム】話題 of Amazon売れ筋商品をプロ目線で徹底レビュー";
 
     return res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
       title: targetTitle,
-      originalUrl: inputUrl || (detectedAsin ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}`),
+      originalUrl: inputUrl || (isSony ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(resolvedSearchKeyword)}`),
       asin: detectedAsin || "Search",
       category: targetCategory,
       imageUrl: finalImg,
@@ -733,7 +737,7 @@ Amazonで買うからこそ最高の保証と即納スピード
     res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
       title: outputJson.title || "【今こそ買い】話題のAmazonベストセラー徹底個別レビュー",
-      originalUrl: inputUrl || (detectedAsin ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}`),
+      originalUrl: inputUrl || (isSony ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(resolvedSearchKeyword)}`),
       asin: detectedAsin || "Search",
       category: targetCategory,
       imageUrl: finalImg,
@@ -773,7 +777,7 @@ Amazonで買うからこそ最高の保証と即納スピード
     res.json({
       id: "art_" + Math.random().toString(36).substring(2, 11),
       title: targetTitle,
-      originalUrl: inputUrl || (detectedAsin ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(searchKeyword)}`),
+      originalUrl: inputUrl || (isSony ? `https://www.amazon.co.jp/dp/${detectedAsin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(resolvedSearchKeyword)}`),
       asin: detectedAsin || "Search",
       category: targetCategory,
       imageUrl: finalImg,
