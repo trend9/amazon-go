@@ -70,6 +70,49 @@ function cleanMarkdownHeaders(text: string): string {
     .replace(/`{1,}/g, "");  // Backticks
 }
 
+// Helper to return fallback images if image URL is invalid, empty, or points to deprecated Amazon adsystem domain
+function getValidImageUrl(imageUrl: string, category: string, title: string): string {
+  if (!imageUrl || imageUrl.includes('amazon-adsystem.com')) {
+    const fallbackImages: Record<string, string[]> = {
+      gadgets: [
+        "https://images.unsplash.com/photo-1546054471-190c10847711?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1572561357382-95d271950998?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600"
+      ],
+      pc: [
+        "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&q=80&w=600"
+      ],
+      kitchen: [
+        "https://images.unsplash.com/photo-1584269603463-35149fa7e826?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600"
+      ],
+      beauty: [
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1608248597481-496100c80836?auto=format&fit=crop&q=80&w=600"
+      ],
+      fashion: [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600"
+      ],
+      'books-games': [
+        "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1486572788966-cfd3df1f5b42?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1612287230202-1bf1d85d1bdf?auto=format&fit=crop&q=80&w=600"
+      ]
+    };
+    const categoryKey = category || 'gadgets';
+    const list = fallbackImages[categoryKey] || fallbackImages['gadgets'];
+    const hash = (title || imageUrl || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return list[Math.abs(hash) % list.length];
+  }
+  return imageUrl;
+}
+
 // Automated Semantic Internal Linker
 function renderReviewBodyWithLinks(
   bodyText: string,
@@ -868,7 +911,7 @@ jobs:
                   {/* Main Product Info Block */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2">
                     <div className="md:col-span-4 aspect-square bg-zinc-950 rounded-xl overflow-hidden border border-zinc-900 shadow-md">
-                      <img src={reviewArticle.imageUrl} alt={reviewArticle.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img src={getValidImageUrl(reviewArticle.imageUrl, reviewArticle.category, reviewArticle.title)} alt={reviewArticle.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div className="md:col-span-8 flex flex-col justify-between gap-4">
                       <div className="bg-gradient-to-r from-zinc-950 to-zinc-900/40 p-4 sm:p-5 rounded-xl border border-zinc-900/60 font-sans italic text-zinc-300 leading-relaxed text-sm sm:text-base">
@@ -970,7 +1013,7 @@ jobs:
                               className="bg-zinc-950/40 border border-zinc-900 hover:border-zinc-800 hover:bg-[#0e0e11] p-4 rounded-xl text-left cursor-pointer transition-all flex flex-col gap-3 group relative overflow-hidden"
                             >
                               <div className="aspect-video w-full bg-zinc-900 rounded-lg overflow-hidden border border-zinc-855 relative">
-                                <img src={art.imageUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
+                                <img src={getValidImageUrl(art.imageUrl, art.category, art.title)} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
                               </div>
                               <div className="flex-1 flex flex-col justify-between">
                                 <h4 className="text-xs sm:text-sm font-bold text-zinc-300 group-hover:text-white line-clamp-2 leading-snug">
@@ -1105,7 +1148,7 @@ jobs:
                         className="bg-[#0a0a0c] border border-[#131317] hover:border-zinc-800 hover:bg-[#0e0e11] p-4 rounded-xl text-left cursor-pointer transition-all flex flex-col gap-3 group relative overflow-hidden"
                       >
                         <div className="aspect-video w-full bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800/80 relative">
-                          <img src={art.imageUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
+                          <img src={getValidImageUrl(art.imageUrl, art.category, art.title)} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
                           <span className="absolute bottom-2 right-2 text-[10px] bg-black/80 px-2 py-0.5 rounded text-orange-400 font-mono font-bold flex items-center gap-0.5">
                             <Star className="w-3 h-3 text-orange-500 fill-orange-500" />
                             {art.starRating}
@@ -1786,7 +1829,7 @@ jobs:
                 >
                   <div className="space-y-2.5">
                     <div className="w-full aspect-video rounded-lg overflow-hidden bg-zinc-900 relative">
-                      <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
+                      <img src={getValidImageUrl(prod.img, "", prod.name)} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300" referrerPolicy="no-referrer" />
                       <span className="absolute top-1.5 left-1.5 text-[8px] bg-amber-500 text-black font-black px-1.5 py-0.5 rounded tracking-wide uppercase">
                         {prod.label}
                       </span>
@@ -1816,7 +1859,7 @@ jobs:
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
-                      <img src={bannerProducts[0].img} className="w-full h-full object-cover" alt={bannerProducts[0].name} referrerPolicy="no-referrer" />
+                      <img src={getValidImageUrl(bannerProducts[0].img, "", bannerProducts[0].name)} className="w-full h-full object-cover" alt={bannerProducts[0].name} referrerPolicy="no-referrer" />
                       <span className="absolute top-0.5 left-0.5 text-[6px] bg-amber-500 text-black font-extrabold px-1 rounded">HOT</span>
                     </div>
                     <div className="min-w-0">

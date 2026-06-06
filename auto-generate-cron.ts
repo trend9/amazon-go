@@ -270,7 +270,7 @@ async function run() {
             asin: item.asin,
             name: item.name,
             price: item.price,
-            img: `https://ws-fe.amazon-adsystem.com/widgets/q?_encoding=UTF8&Format=_SL600_&ASIN=${item.asin}&MarketPlace=JP&ID=AsinImage&WS=1&ServiceVersion=20070822`,
+            img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
             affiliateLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
             category: cat
           });
@@ -327,7 +327,7 @@ async function run() {
           originalUrl: `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
           asin: dispatchProduct.asin,
           category: dispatchProduct.category,
-          imageUrl: `https://ws-fe.amazon-adsystem.com/widgets/q?_encoding=UTF8&Format=_SL600_&ASIN=${dispatchProduct.asin}&MarketPlace=JP&ID=AsinImage&WS=1&ServiceVersion=20070822`,
+          imageUrl: dispatchProduct.img || `https://picsum.photos/seed/${dispatchProduct.asin}/400/300`,
           starRating: outputJson.starRating || 4.5,
           introText: outputJson.introText || "QOLが向上すると大ヒット中の商品。その実力を本音で評価します。",
           features: outputJson.features || ["高速動作", "長寿命設計", "ギフトにも最適"],
