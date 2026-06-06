@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import https from "https";
+import fs from "fs";
 
 dotenv.config();
 
@@ -338,6 +339,240 @@ app.get("/api/amazon-products", async (req, res) => {
   res.json(results);
 });
 
+let viteInstance: any = null;
+
+function mapFirestoreFields(fields: any): any {
+  const result: any = {};
+  if (!fields) return result;
+  for (const key of Object.keys(fields)) {
+    const valObj = fields[key];
+    if (valObj.stringValue !== undefined) {
+      result[key] = valObj.stringValue;
+    } else if (valObj.doubleValue !== undefined) {
+      result[key] = parseFloat(valObj.doubleValue);
+    } else if (valObj.integerValue !== undefined) {
+      result[key] = parseInt(valObj.integerValue, 10);
+    } else if (valObj.booleanValue !== undefined) {
+      result[key] = valObj.booleanValue;
+    } else if (valObj.arrayValue && valObj.arrayValue.values) {
+      result[key] = valObj.arrayValue.values.map((v: any) => {
+        if (v.stringValue !== undefined) return v.stringValue;
+        if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
+        if (v.integerValue !== undefined) return parseInt(v.integerValue, 10);
+        return v;
+      });
+    } else {
+      result[key] = valObj;
+    }
+  }
+  return result;
+}
+
+async function fetchArticleFromFirestoreREST(articleId: string): Promise<any | null> {
+  try {
+    const projectId = "go-app-4dcb9";
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/articles/${articleId}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const docJson: any = await res.json();
+    return {
+      id: articleId,
+      ...mapFirestoreFields(docJson.fields)
+    };
+  } catch (err) {
+    console.error(`Error fetching article ${articleId}:`, err);
+    return null;
+  }
+}
+
+async function fetchAllArticlesFromFirestoreREST(): Promise<any[]> {
+  try {
+    const projectId = "go-app-4dcb9";
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/articles?pageSize=100`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const resJson: any = await res.json();
+    if (!resJson.documents) return [];
+    return resJson.documents.map((docJson: any) => {
+      const parts = docJson.name.split('/');
+      const id = parts[parts.length - 1];
+      return {
+        id,
+        ...mapFirestoreFields(docJson.fields)
+      };
+    });
+  } catch (err) {
+    console.error("Error fetching all articles:", err);
+    return [];
+  }
+}
+
+// dynamic sitemap.xml
+app.get("/sitemap.xml", async (req, res) => {
+  const articles = await fetchAllArticlesFromFirestoreREST();
+  const host = req.headers.host || "localhost:3000";
+  const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  // Home page
+  xml += `  <url>\n`;
+  xml += `    <loc>${baseUrl}/</loc>\n`;
+  xml += `    <changefreq>daily</changefreq>\n`;
+  xml += `    <priority>1.0</priority>\n`;
+  xml += `  </url>\n`;
+
+  // Admin page
+  xml += `  <url>\n`;
+  xml += `    <loc>${baseUrl}/host</loc>\n`;
+  xml += `    <changefreq>weekly</changefreq>\n`;
+  xml += `    <priority>0.3</priority>\n`;
+  xml += `  </url>\n`;
+
+  // Articles pages
+  for (const art of articles) {
+    xml += `  <url>\n`;
+    xml += `    <loc>${baseUrl}/review/${art.id}</loc>\n`;
+    xml += `    <lastmod>${(art.createdAt || new Date().toISOString()).substring(0, 10)}</lastmod>\n`;
+    xml += `    <changefreq>monthly</changefreq>\n`;
+    xml += `    <priority>0.8</priority>\n`;
+    xml += `  </url>\n`;
+  }
+
+  xml += `</urlset>`;
+
+  res.header("Content-Type", "application/xml");
+  res.send(xml);
+});
+
+// dynamic rss.xml
+app.get("/rss.xml", async (req, res) => {
+  const articles = await fetchAllArticlesFromFirestoreREST();
+  const host = req.headers.host || "localhost:3000";
+  const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  // Sort by date desc
+  articles.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  let xml = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
+  xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n`;
+  xml += `<channel>\n`;
+  xml += `  <title>あまぞん GO!! - QOL向上商品レビューメディア</title>\n`;
+  xml += `  <link>${baseUrl}</link>\n`;
+  xml += `  <description>専門バイヤーによる本音のAmazon商品レビュー自動配信フィード</description>\n`;
+  xml += `  <language>ja</language>\n`;
+  xml += `  <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml" />\n`;
+
+  for (const art of articles) {
+    const pubDate = art.createdAt 
+      ? new Date(art.createdAt.replace(' ', 'T') + 'Z').toUTCString()
+      : new Date().toUTCString();
+      
+    xml += `  <item>\n`;
+    xml += `    <title><![CDATA[${art.title}]]></title>\n`;
+    xml += `    <link>${baseUrl}/review/${art.id}</link>\n`;
+    xml += `    <guid>${baseUrl}/review/${art.id}</guid>\n`;
+    xml += `    <pubDate>${pubDate}</pubDate>\n`;
+    xml += `    <description><![CDATA[${art.introText || ""}]]></description>\n`;
+    xml += `  </item>\n`;
+  }
+
+  xml += `</channel>\n`;
+  xml += `</rss>`;
+
+  res.header("Content-Type", "application/xml");
+  res.send(xml);
+});
+
+// dynamic review pages with SEO injection (Title, Meta, JSON-LD Schema)
+app.get("/review/:id", async (req, res, next) => {
+  try {
+    const articleId = req.params.id;
+    const article = await fetchArticleFromFirestoreREST(articleId);
+
+    let htmlPath = "";
+    if (process.env.NODE_ENV !== "production") {
+      htmlPath = path.join(process.cwd(), "index.html");
+    } else {
+      htmlPath = path.join(process.cwd(), "dist", "index.html");
+    }
+
+    if (!fs.existsSync(htmlPath)) {
+      return next();
+    }
+
+    let html = fs.readFileSync(htmlPath, "utf-8");
+
+    if (article) {
+      // Clean quotes and newlines for JSON-LD safety
+      const cleanTitle = article.title.replace(/"/g, '\\"');
+      const cleanIntro = (article.introText || "").replace(/"/g, '\\"');
+      const cleanBody = (article.reviewBody || "").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+
+      // Inject SEO tags and schema markup before </head>
+      const seoTags = `
+  <title>${article.title} | あまぞん GO!!</title>
+  <meta name="description" content="${article.introText || ''}" />
+  <meta property="og:title" content="${article.title}" />
+  <meta property="og:description" content="${article.introText || ''}" />
+  <meta property="og:image" content="${article.imageUrl || ''}" />
+  <meta property="og:url" content="https://${req.headers.host || 'www.amazon-go.jp'}/review/${article.id}" />
+  <meta property="og:type" content="article" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${article.title}" />
+  <meta name="twitter:description" content="${article.introText || ''}" />
+  <meta name="twitter:image" content="${article.imageUrl || ''}" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "${cleanTitle}",
+    "image": "${article.imageUrl || ''}",
+    "description": "${cleanIntro}",
+    "offers": {
+      "@type": "Offer",
+      "url": "${article.affiliateLink || ''}",
+      "priceCurrency": "JPY",
+      "price": "${(article.price || '').replace(/[^0-9]/g, '') || '1000'}",
+      "availability": "https://schema.org/InStock"
+    },
+    "review": {
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": "あまぞん GO!! 専門バイヤー"
+      },
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "${article.starRating || 4.5}",
+        "bestRating": "5"
+      },
+      "reviewBody": "${cleanBody}"
+    }
+  }
+  </script>
+`;
+      // Replace existing title if present, otherwise prepend
+      if (html.includes("<title>")) {
+        html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${article.title} | あまぞん GO!!</title>`);
+      }
+      html = html.replace("</head>", `${seoTags}\n</head>`);
+    }
+
+    if (process.env.NODE_ENV !== "production" && viteInstance) {
+      html = await viteInstance.transformIndexHtml(req.originalUrl, html);
+    }
+
+    res.send(html);
+  } catch (err) {
+    console.error("Failed to render SEO article page:", err);
+    next();
+  }
+});
+
 // 3. High-Performance Review Generator API
 app.post("/api/generate-amazon-review", async (req, res) => {
   const { inputUrl, category, associateId, userCustomTitle, customAffiliateLink } = req.body;
@@ -573,6 +808,7 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
+    viteInstance = vite;
     app.use(vite.middlewares);
     console.log("Vite interactive asset stream initialized.");
   } else {

@@ -270,7 +270,7 @@ async function run() {
             name: item.name,
             price: item.price,
             img: item.img,
-            affiliateLink: `https://www.amazon.co.jp/dp/${item.asin}/ref=nosim?tag=${tag}`,
+            affiliateLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
             category: cat
           });
           itemsAddedForCat++;
@@ -323,7 +323,7 @@ async function run() {
         const freshArticle = {
           id: freshArticleId,
           title: outputJson.title || `【最新実機レビュー】QOL高まる決定版「${dispatchProduct.name}」を徹底検証`,
-          originalUrl: `https://www.amazon.co.jp/dp/${dispatchProduct.asin}`,
+          originalUrl: `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
           asin: dispatchProduct.asin,
           category: dispatchProduct.category,
           imageUrl: dispatchProduct.img,
