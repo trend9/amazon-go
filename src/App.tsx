@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import {
   Tv,
   Laptop,
@@ -1926,6 +1927,7 @@ jobs:
         <div className="border-t border-zinc-900 pt-5 mt-4 flex items-center justify-center px-1 text-[11px] sm:text-xs text-zinc-550">
           <span>© 2026 あまぞん GO!! PORTFOLIO CO., LTD.</span>
         </div>
+      <Analytics />
 
       </div>
     </div>
