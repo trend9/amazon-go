@@ -214,6 +214,8 @@ JSON Schema:
     }
     throw e;
   }
+}
+
 async function generateTrendingProductsViaLLM(category: string): Promise<{ asin: string; name: string; price: string; img: string; category: string }[]> {
   const systemPrompt = `You are an expert market analyst for Amazon Japan. 
 Generate a list of 8 currently highly popular, trending, and best-selling real products on Amazon Japan for the category: "${category}".
