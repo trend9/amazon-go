@@ -6,6 +6,18 @@
       "destination": "/api"
     },
     {
+      "source": "/review/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api"
+    },
+    {
+      "source": "/rss.xml",
+      "destination": "/api"
+    },
+    {
       "source": "/(.*)",
       "destination": "/$1"
     }

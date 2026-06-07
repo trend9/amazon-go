@@ -295,6 +295,47 @@ async function run() {
         });
       }
 
+      // FALLBACK: If refillPool is empty because all master pool items are already articles or in stock, recycle items not in current stock
+      if (refillPool.length === 0) {
+        await pushLog("All master pool items are already in articles or stock. Falling back to recycling items not in current stock...", "info");
+        const currentStockAsins = new Set(stockDocs.map(d => d.id.toLowerCase()));
+        const recycledPool: typeof refillPool = [];
+
+        for (const cat of Object.keys(MASTER_PRODUCT_POOL)) {
+          const catProducts = MASTER_PRODUCT_POOL[cat];
+          let itemsAddedForCat = 0;
+
+          for (const item of catProducts) {
+            if (itemsAddedForCat >= 9) break;
+            if (currentStockAsins.has(item.asin.toLowerCase())) continue;
+
+            recycledPool.push({
+              asin: item.asin,
+              name: item.name,
+              price: item.price,
+              img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
+              affiliateLink: item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ" ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
+              category: cat
+            });
+            itemsAddedForCat++;
+            currentStockAsins.add(item.asin.toLowerCase());
+          }
+        }
+
+        await pushLog(`Recycling ${recycledPool.length} products back to stock_products...`, "info");
+        for (const prod of recycledPool) {
+          await setDoc(doc(db, 'stock_products', prod.asin), {
+            asin: prod.asin,
+            name: prod.name,
+            price: prod.price,
+            img: prod.img,
+            affiliateLink: prod.affiliateLink,
+            category: prod.category,
+            fetchedAt: new Date().toISOString()
+          });
+        }
+      }
+
       // Re-read stock snapshot to grab the newly added items
       const newStockSnap = await getDocs(stockCol);
       stockDocs = [...newStockSnap.docs];
