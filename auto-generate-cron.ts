@@ -214,6 +214,67 @@ JSON Schema:
     }
     throw e;
   }
+async function generateTrendingProductsViaLLM(category: string): Promise<{ asin: string; name: string; price: string; img: string; category: string }[]> {
+  const systemPrompt = `You are an expert market analyst for Amazon Japan. 
+Generate a list of 8 currently highly popular, trending, and best-selling real products on Amazon Japan for the category: "${category}".
+Return ONLY a raw JSON array matching this schema:
+[
+  {
+    "asin": "10-character real ASIN (must be real and accurate for the product, e.g., B0CG1TNYR3, B0DGWYDRM4, B0CH191KNC)",
+    "name": "Full product name in Japanese as it appears on Amazon",
+    "price": "Formatted price (e.g. ¥29,800)",
+    "img": "Placehold image URL, use https://picsum.photos/seed/{asin}/400/300",
+    "category": "${category}"
+  }
+]
+Do not output markdown code blocks or any other text.`;
+
+  const userPrompt = `List 8 popular trending products on Amazon Japan for "${category}" category.`;
+
+  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.HF_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "Qwen/Qwen2.5-72B-Instruct",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 1500,
+      temperature: 0.8
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Hugging Face API error when fetching popular products: ${errText}`);
+  }
+
+  const resJson: any = await response.json();
+  const content = resJson.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("Empty response when fetching popular products");
+  }
+
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "");
+    jsonStr = jsonStr.replace(/\n?```$/, "");
+  }
+  jsonStr = jsonStr.trim();
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    const match = jsonStr.match(/\[[\s\S]*\]/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    throw e;
+  }
 }
 
 async function run() {
@@ -243,42 +304,112 @@ async function run() {
     let stockDocs = [...stockSnap.docs];
     await pushLog(`Current stock size: ${stockDocs.length}. Articles size: ${articlesSnap.size}.`, "info");
 
-    // 2. Refill Stock if count is less than 24 (using Master pool with real ASINs)
+    // 2. Refill Stock if count is less than 24 (using LLM dynamic popular product generation, falling back to Master pool)
     if (stockDocs.length < 24) {
-      await pushLog(`Stock level is low (${stockDocs.length}/24). Initiating stock refill pipeline for 50 items...`, "info");
+      await pushLog(`Stock level is low (${stockDocs.length}/24). Initiating dynamic stock refill pipeline via LLM...`, "info");
 
       const refillPool: { asin: string; name: string; price: string; img: string; affiliateLink: string; category: string }[] = [];
+      const categories = Object.keys(MASTER_PRODUCT_POOL);
 
-      // Go through each category and fetch 8-9 items to achieve ~50 items total
-      for (const cat of Object.keys(MASTER_PRODUCT_POOL)) {
-        const catProducts = MASTER_PRODUCT_POOL[cat];
-        let itemsAddedForCat = 0;
+      // Attempt to dynamically fetch trending/best-selling products from the LLM
+      for (const cat of categories) {
+        try {
+          await pushLog(`Asking LLM to generate current popular Amazon Japan products in "${cat}" category...`, "info");
+          const llmProducts = await generateTrendingProductsViaLLM(cat);
+          let itemsAddedForCat = 0;
 
-        for (const item of catProducts) {
-          if (itemsAddedForCat >= 9) break;
+          for (const item of llmProducts) {
+            if (itemsAddedForCat >= 5) break; // limit to 5 products per category to keep it balanced
 
-          // Prevent duplication
-          const isDuplicate = Array.from(existingAsinsAndKeywords).some(val => 
-              val.includes(item.name.toLowerCase()) || 
-              val.includes(item.keyword.toLowerCase()) ||
-              val.includes(item.asin.toLowerCase())
-          );
+            // Prevent duplication
+            const isDuplicate = Array.from(existingAsinsAndKeywords).some(val => 
+                val.includes(item.name.toLowerCase()) || 
+                val.includes(item.asin.toLowerCase())
+            );
 
-          if (isDuplicate) continue;
+            if (isDuplicate) continue;
 
-          const isSony = item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ";
-          refillPool.push({
-            asin: item.asin,
-            name: item.name,
-            price: item.price,
-            img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
-            affiliateLink: isSony ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
-            category: cat
-          });
-          itemsAddedForCat++;
-          
-          existingAsinsAndKeywords.add(item.asin.toLowerCase());
-          existingAsinsAndKeywords.add(item.name.toLowerCase());
+            const isSony = item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ";
+            refillPool.push({
+              asin: item.asin,
+              name: item.name,
+              price: item.price,
+              img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
+              affiliateLink: isSony ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
+              category: cat
+            });
+            itemsAddedForCat++;
+            
+            existingAsinsAndKeywords.add(item.asin.toLowerCase());
+            existingAsinsAndKeywords.add(item.name.toLowerCase());
+          }
+        } catch (catErr) {
+          await pushLog(`Failed to dynamically generate trending products for category "${cat}" via LLM: ${catErr.message || catErr}`, "warn");
+        }
+      }
+
+      // FALLBACK: If LLM fetch yielded 0 new products, fall back to static pool with recycling
+      if (refillPool.length === 0) {
+        await pushLog("LLM dynamic product generation yielded 0 new products. Falling back to static MASTER_PRODUCT_POOL...", "info");
+
+        // Go through each category and fetch 8-9 items to achieve ~50 items total
+        for (const cat of Object.keys(MASTER_PRODUCT_POOL)) {
+          const catProducts = MASTER_PRODUCT_POOL[cat];
+          let itemsAddedForCat = 0;
+
+          for (const item of catProducts) {
+            if (itemsAddedForCat >= 9) break;
+
+            // Prevent duplication
+            const isDuplicate = Array.from(existingAsinsAndKeywords).some(val => 
+                val.includes(item.name.toLowerCase()) || 
+                val.includes(item.keyword.toLowerCase()) ||
+                val.includes(item.asin.toLowerCase())
+            );
+
+            if (isDuplicate) continue;
+
+            const isSony = item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ";
+            refillPool.push({
+              asin: item.asin,
+              name: item.name,
+              price: item.price,
+              img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
+              affiliateLink: isSony ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
+              category: cat
+            });
+            itemsAddedForCat++;
+            
+            existingAsinsAndKeywords.add(item.asin.toLowerCase());
+            existingAsinsAndKeywords.add(item.name.toLowerCase());
+          }
+        }
+
+        // SECONDARY FALLBACK: Recycle items that are not in current stock
+        if (refillPool.length === 0) {
+          await pushLog("All static pool items are already in articles/stock. Recycling items not in current stock...", "info");
+          const currentStockAsins = new Set(stockDocs.map(d => d.id.toLowerCase()));
+
+          for (const cat of Object.keys(MASTER_PRODUCT_POOL)) {
+            const catProducts = MASTER_PRODUCT_POOL[cat];
+            let itemsAddedForCat = 0;
+
+            for (const item of catProducts) {
+              if (itemsAddedForCat >= 9) break;
+              if (currentStockAsins.has(item.asin.toLowerCase())) continue;
+
+              refillPool.push({
+                asin: item.asin,
+                name: item.name,
+                price: item.price,
+                img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
+                affiliateLink: item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ" ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
+                category: cat
+              });
+              itemsAddedForCat++;
+              currentStockAsins.add(item.asin.toLowerCase());
+            }
+          }
         }
       }
 
@@ -293,47 +424,6 @@ async function run() {
           category: prod.category,
           fetchedAt: new Date().toISOString()
         });
-      }
-
-      // FALLBACK: If refillPool is empty because all master pool items are already articles or in stock, recycle items not in current stock
-      if (refillPool.length === 0) {
-        await pushLog("All master pool items are already in articles or stock. Falling back to recycling items not in current stock...", "info");
-        const currentStockAsins = new Set(stockDocs.map(d => d.id.toLowerCase()));
-        const recycledPool: typeof refillPool = [];
-
-        for (const cat of Object.keys(MASTER_PRODUCT_POOL)) {
-          const catProducts = MASTER_PRODUCT_POOL[cat];
-          let itemsAddedForCat = 0;
-
-          for (const item of catProducts) {
-            if (itemsAddedForCat >= 9) break;
-            if (currentStockAsins.has(item.asin.toLowerCase())) continue;
-
-            recycledPool.push({
-              asin: item.asin,
-              name: item.name,
-              price: item.price,
-              img: item.img || `https://picsum.photos/seed/${item.asin}/400/300`,
-              affiliateLink: item.asin === "B09Y2MYLMC" || item.asin === "B0D2XBV7FZ" ? `https://amzn.to/4fZYn2T` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.name)}&tag=${tag}`,
-              category: cat
-            });
-            itemsAddedForCat++;
-            currentStockAsins.add(item.asin.toLowerCase());
-          }
-        }
-
-        await pushLog(`Recycling ${recycledPool.length} products back to stock_products...`, "info");
-        for (const prod of recycledPool) {
-          await setDoc(doc(db, 'stock_products', prod.asin), {
-            asin: prod.asin,
-            name: prod.name,
-            price: prod.price,
-            img: prod.img,
-            affiliateLink: prod.affiliateLink,
-            category: prod.category,
-            fetchedAt: new Date().toISOString()
-          });
-        }
       }
 
       // Re-read stock snapshot to grab the newly added items
