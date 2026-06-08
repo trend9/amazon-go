@@ -11,10 +11,10 @@ dotenv.config();
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Check Hugging Face Token
-const hfToken = process.env.HF_TOKEN;
-if (!hfToken) {
-  console.error("Error: HF_TOKEN is not set.");
+// Check Colab API URL
+const colabApiUrl = process.env.COLAB_API_URL;
+if (!colabApiUrl) {
+  console.error("Error: COLAB_API_URL is not set.");
   process.exit(1);
 }
 
@@ -131,7 +131,7 @@ async function pushLog(message: string, type: 'info' | 'success' | 'warn' | 'ai'
   console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
-async function generateQwenReview(productName: string, category: string, affiliateLink: string, tag: string): Promise<any> {
+async function generateGemmaReview(productName: string, category: string, affiliateLink: string, tag: string): Promise<any> {
   const systemPrompt = `You are the world's most talented Amazon Affiliate copywriter and conversion rates optimization (CRO) engineer.
 Your primary language is Japanese. Your tone is incredibly passionate, informative, deeply detailed, and transparent but highly persuasive.
 You know how to convert raw product features into absolute life-changing experiences for the consumer.
@@ -147,7 +147,8 @@ JSON Schema:
   "pros": ["メリット1", "メリット2", "メリット3"], // 実際に手に入れて得られる強烈なメリット・良い点 3個 (array of strings)
   "cons": ["デメリット1", "デメリット2"], // 正直に伝えるデメリットや留意点 2個 (array of strings)
   "reviewBody": "説得力の高い詳細レビュー本文 (string)",
-  "ctaTitle": "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内 (string)"
+  "ctaTitle": "リンク周辺に設置するユーザーの背中を押す高コンバージョンなCTA文言・案内 (string)",
+  "imagePrompt": "A highly detailed English prompt to generate a beautiful, realistic, premium quality product photograph of this product for Stable Diffusion. (string)"
 }`;
 
   const userPrompt = `日本のアマゾンアフィリエイト商品の情報から、思わずユーザーが欲しくてクリックしたくなる圧倒的な「高コンバージョン（超高CTA）商品レビュー記事」を作成してください。
@@ -164,17 +165,18 @@ JSON Schema:
 3. 特徴、実際に使って良かった点（メリット：3個）、購入前に知るべき注意点（デメリット：2個）、そして詳細なレビュー本文（見出し記号は一切使わず、読みやすい改行を多用した詳細なテキスト）を高熱量で書いてください。
 4. 信頼感を示すためのスター評価（4.0〜5.0の間）を選定してください。
 5. 最終的にリンクへと誘導するキャッチーな「CTA勧誘タイトル（CTAボタン用の文言）」を作成してください。
+6. この商品に合わせた、Stable Diffusion v1-5用の画像生成プロンプト(imagePrompt)を英語で詳細かつ具体的に記述してください。
 
 ※重要品質制限: 本文や特徴等のすべてのテキスト項目の中で、見出し文字(「#」「##」「###」等)や、アスタリスク(「*」)、コード用バックティック(「\`」)などのマークダウン特有 of テキストフォーマット表現文字は【絶対に】使わないでください。見出し部分は単なる一行のプレーンなテキスト段落として記述してください。`;
 
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+  const colabApiUrl = process.env.COLAB_API_URL;
+  const response = await fetch(`${colabApiUrl}/v1/chat/completions`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${process.env.HF_TOKEN}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "Qwen/Qwen2.5-72B-Instruct",
+      model: "gemma2",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -186,13 +188,13 @@ JSON Schema:
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Hugging Face API error (Status ${response.status}): ${errText}`);
+    throw new Error(`Colab Gemma 2 API error (Status ${response.status}): ${errText}`);
   }
 
   const resJson: any = await response.json();
   const content = resJson.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error("Empty content returned from Hugging Face API");
+    throw new Error("Empty content returned from Colab Gemma 2 API");
   }
 
   let jsonStr = content.trim();
@@ -216,6 +218,47 @@ JSON Schema:
   }
 }
 
+async function generateSDImage(prompt: string): Promise<string | null> {
+  const colabApiUrl = process.env.COLAB_API_URL;
+  if (!colabApiUrl) return null;
+
+  try {
+    console.log(`Calling Stable Diffusion v1-5 via Colab API: "${prompt}"...`);
+    const response = await fetch(`${colabApiUrl}/sdapi/v1/txt2img`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        negative_prompt: "low quality, bad quality, blurry, distorted, lowres, text, watermark, signature",
+        steps: 20,
+        width: 512,
+        height: 512,
+        batch_size: 1
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn(`Stable Diffusion API error (Status ${response.status}): ${errText}`);
+      return null;
+    }
+
+    const resJson: any = await response.json();
+    const base64Image = resJson.images?.[0];
+    if (!base64Image) {
+      console.warn("No image returned from Stable Diffusion API");
+      return null;
+    }
+
+    return `data:image/png;base64,${base64Image}`;
+  } catch (err: any) {
+    console.warn(`Failed to generate image via Stable Diffusion: ${err.message || err}`);
+    return null;
+  }
+}
+
 async function generateTrendingProductsViaLLM(category: string): Promise<{ asin: string; name: string; price: string; img: string; category: string }[]> {
   const systemPrompt = `You are an expert market analyst for Amazon Japan. 
 Generate a list of 8 currently highly popular, trending, and best-selling real products on Amazon Japan for the category: "${category}".
@@ -233,14 +276,14 @@ Do not output markdown code blocks or any other text.`;
 
   const userPrompt = `List 8 popular trending products on Amazon Japan for "${category}" category.`;
 
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+  const colabApiUrl = process.env.COLAB_API_URL;
+  const response = await fetch(`${colabApiUrl}/v1/chat/completions`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${process.env.HF_TOKEN}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "Qwen/Qwen2.5-72B-Instruct",
+      model: "gemma2",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -252,7 +295,7 @@ Do not output markdown code blocks or any other text.`;
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Hugging Face API error when fetching popular products: ${errText}`);
+    throw new Error(`Colab Gemma 2 API error when fetching popular products: ${errText}`);
   }
 
   const resJson: any = await response.json();
@@ -280,7 +323,7 @@ Do not output markdown code blocks or any other text.`;
 }
 
 async function run() {
-  await pushLog("Starting automated review stock & Hugging Face auto-generation pipeline...", "info");
+  await pushLog("Starting automated review stock & Colab auto-generation pipeline...", "info");
 
   try {
     const tag = process.env.AMAZON_ASSOCIATE_ID || "mattan0290c-22";
@@ -446,12 +489,27 @@ async function run() {
 
     for (const dispatchDoc of itemsToProcess) {
       const dispatchProduct = dispatchDoc.data();
-      await pushLog(`Dispatching product from stock for Hugging Face review: "${dispatchProduct.name}" (${dispatchProduct.asin})`, "info");
+      await pushLog(`Dispatching product from stock for Colab review: "${dispatchProduct.name}" (${dispatchProduct.asin})`, "info");
 
       try {
-        await pushLog(`Calling Hugging Face Qwen 2.5 72B API...`, "ai");
-        const outputJson = await generateQwenReview(dispatchProduct.name, dispatchProduct.category, dispatchProduct.affiliateLink, tag);
-        await pushLog(`Hugging Face generation succeeded.`, "success");
+        await pushLog(`Calling Colab Gemma 2 9B API...`, "ai");
+        const outputJson = await generateGemmaReview(dispatchProduct.name, dispatchProduct.category, dispatchProduct.affiliateLink, tag);
+        await pushLog(`Colab Gemma 2 generation succeeded.`, "success");
+
+        // Generate image via Stable Diffusion
+        let generatedImageUrl = "";
+        if (outputJson.imagePrompt) {
+          try {
+            await pushLog(`Generating image via Colab Stable Diffusion...`, "ai");
+            const sdImg = await generateSDImage(outputJson.imagePrompt);
+            if (sdImg) {
+              generatedImageUrl = sdImg;
+              await pushLog(`Stable Diffusion image generation succeeded.`, "success");
+            }
+          } catch (sdErr: any) {
+            await pushLog(`Stable Diffusion image generation failed: ${sdErr.message || sdErr}`, "warn");
+          }
+        }
 
         const freshArticleId = "art_" + Math.random().toString(36).substring(2, 11);
 
@@ -468,7 +526,7 @@ async function run() {
           originalUrl: isSony ? `https://www.amazon.co.jp/dp/${dispatchProduct.asin}` : `https://www.amazon.co.jp/s?k=${encodeURIComponent(dispatchProduct.name)}`,
           asin: dispatchProduct.asin,
           category: dispatchProduct.category,
-          imageUrl: dispatchProduct.img || `https://picsum.photos/seed/${dispatchProduct.asin}/400/300`,
+          imageUrl: generatedImageUrl || dispatchProduct.img || `https://picsum.photos/seed/${dispatchProduct.asin}/400/300`,
           starRating: outputJson.starRating || 4.5,
           introText: outputJson.introText || "QOLが向上すると大ヒット中の商品。その実力を本音で評価します。",
           features: outputJson.features || ["高速動作", "長寿命設計", "ギフトにも最適"],
@@ -481,7 +539,7 @@ async function run() {
           estimatedPV: 0,
           clicks: 0,
           earnings: 0,
-          aiModelUsed: `Qwen 2.5 72B (Cron Job via HF)`,
+          aiModelUsed: `Gemma 2 (9B) & Stable Diffusion v1-5 (Colab)`,
           cronSecret: "mattan029-cron-bypass"
         };
 
