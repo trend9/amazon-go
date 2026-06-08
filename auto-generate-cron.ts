@@ -12,7 +12,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Check Colab API URL
-const colabApiUrl = process.env.COLAB_API_URL;
+let colabApiUrl = process.argv.find(arg => arg.startsWith("http://") || arg.startsWith("https://"))
+  || process.env.COLAB_API_URL;
+
+if (colabApiUrl) {
+  colabApiUrl = colabApiUrl.replace(/\/$/, '');
+}
+
 if (!colabApiUrl) {
   console.error("Error: COLAB_API_URL is not set.");
   process.exit(1);
