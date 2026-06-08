@@ -21,8 +21,8 @@ jobs:
       - name: パッケージインストール
         run: npm ci
 
-      - name: 自動レビュー生成システム（HF API駆動）
+      - name: 自動レビュー生成システム（Colab API駆動）
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          COLAB_API_URL: ${{ secrets.COLAB_API_URL }}
           AMAZON_ASSOCIATE_ID: ${{ secrets.AMAZON_ASSOCIATE_ID }}
         run: npm run auto-generate-cron
