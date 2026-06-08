@@ -170,19 +170,14 @@ JSON Schema:
 ※重要品質制限: 本文や特徴等のすべてのテキスト項目の中で、見出し文字(「#」「##」「###」等)や、アスタリスク(「*」)、コード用バックティック(「\`」)などのマークダウン特有 of テキストフォーマット表現文字は【絶対に】使わないでください。見出し部分は単なる一行のプレーンなテキスト段落として記述してください。`;
 
   const colabApiUrl = process.env.COLAB_API_URL;
-  const response = await fetch(`${colabApiUrl}/v1/chat/completions`, {
+  const response = await fetch(`${colabApiUrl}/generate/text`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gemma2",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 2048,
-      temperature: 0.7
+      system_prompt: systemPrompt,
+      user_prompt: userPrompt
     })
   });
 
@@ -192,7 +187,7 @@ JSON Schema:
   }
 
   const resJson: any = await response.json();
-  const content = resJson.choices?.[0]?.message?.content;
+  const content = resJson.result;
   if (!content) {
     throw new Error("Empty content returned from Colab Gemma 2 API");
   }
@@ -224,18 +219,15 @@ async function generateSDImage(prompt: string): Promise<string | null> {
 
   try {
     console.log(`Calling Stable Diffusion v1-5 via Colab API: "${prompt}"...`);
-    const response = await fetch(`${colabApiUrl}/sdapi/v1/txt2img`, {
+    const response = await fetch(`${colabApiUrl}/generate/image`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         prompt: prompt,
-        negative_prompt: "low quality, bad quality, blurry, distorted, lowres, text, watermark, signature",
-        steps: 20,
         width: 512,
-        height: 512,
-        batch_size: 1
+        height: 512
       })
     });
 
@@ -246,13 +238,13 @@ async function generateSDImage(prompt: string): Promise<string | null> {
     }
 
     const resJson: any = await response.json();
-    const base64Image = resJson.images?.[0];
+    const base64Image = resJson.image_base64;
     if (!base64Image) {
       console.warn("No image returned from Stable Diffusion API");
       return null;
     }
 
-    return `data:image/png;base64,${base64Image}`;
+    return `data:image/jpeg;base64,${base64Image}`;
   } catch (err: any) {
     console.warn(`Failed to generate image via Stable Diffusion: ${err.message || err}`);
     return null;
@@ -277,19 +269,14 @@ Do not output markdown code blocks or any other text.`;
   const userPrompt = `List 8 popular trending products on Amazon Japan for "${category}" category.`;
 
   const colabApiUrl = process.env.COLAB_API_URL;
-  const response = await fetch(`${colabApiUrl}/v1/chat/completions`, {
+  const response = await fetch(`${colabApiUrl}/generate/text`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gemma2",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 1500,
-      temperature: 0.8
+      system_prompt: systemPrompt,
+      user_prompt: userPrompt
     })
   });
 
@@ -299,7 +286,7 @@ Do not output markdown code blocks or any other text.`;
   }
 
   const resJson: any = await response.json();
-  const content = resJson.choices?.[0]?.message?.content;
+  const content = resJson.result;
   if (!content) {
     throw new Error("Empty response when fetching popular products");
   }
