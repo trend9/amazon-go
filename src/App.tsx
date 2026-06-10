@@ -698,7 +698,7 @@ ${art.affiliateLink}
 
   // Copy YAML workflows
   const handleCopyYaml = () => {
-    const yamlTemplate = `name: "あまぞん GO!! 定刻自動巡回レビュー自動配信"
+    const yamlTemplate = `name: "モノレポ 定刻自動巡回レビュー自動配信"
 
 on:
   schedule:
@@ -775,12 +775,12 @@ jobs:
   // Dynamically set meta description and JSON-LD schema markup for the active article (Automated SEO)
   useEffect(() => {
     if (!activeArticle) {
-      document.title = "あまぞん GO!! - QOL向上商品レビューメディア";
+      document.title = "モノレポ - QOL向上商品レビューメディア";
       return;
     }
 
     // 0. Update document title
-    document.title = `${activeArticle.title} | あまぞん GO!!`;
+    document.title = `${activeArticle.title} | モノレポ`;
 
     // 1. Update meta description
     let metaDescriptionEl = document.querySelector('meta[name="description"]');
@@ -822,7 +822,7 @@ jobs:
         },
         "author": {
           "@type": "Organization",
-          "name": "あまぞん GO!!"
+          "name": "モノレポ"
         },
         "reviewBody": cleanMarkdownHeaders(activeArticle.reviewBody)
       },
@@ -873,7 +873,7 @@ jobs:
                 }}
                 className="bg-zinc-900 text-amber-500 border border-zinc-800/80 font-black text-xl sm:text-2xl md:text-3xl px-3.5 py-1 rounded-lg tracking-tighter flex items-center gap-1.5 hover:border-amber-500/40 cursor-pointer shadow-inner transition-all"
               >
-                あまぞん GO!!
+                モノレポ
               </div>
               <span className="text-zinc-700 text-base font-normal hidden sm:inline">|</span>
               <p className="text-xs sm:text-sm text-zinc-400 font-medium">
@@ -1231,7 +1231,7 @@ jobs:
                   </div>
                   <h2 className="text-base sm:text-lg font-black text-white">ホスト管理者アクセス制限</h2>
                   <p className="text-xs text-zinc-400">
-                    「あまぞん GO!!」管理コンソールへ入るには、Googleログイン認証を通過する必要があります。
+                    「モノレポ」管理コンソールへ入るには、Googleログイン認証を通過する必要があります。
                   </p>
                 </div>
 
@@ -1387,7 +1387,7 @@ jobs:
                       <div className="flex items-center gap-2 border-b border-zinc-900 pb-3">
                         <FileText className="text-orange-500 w-5 h-5 flex-shrink-0" />
                         <div>
-                          <h3 className="font-black text-white text-xs sm:text-sm">あまぞん GO!! 個別記事の文字修正CMS</h3>
+                          <h3 className="font-black text-white text-xs sm:text-sm">モノレポ 個別記事の文字修正CMS</h3>
                           <p className="text-[10px] text-zinc-500">公開済みの個別記事の文章やリンクをご自身で自由に編集・修正できます</p>
                         </div>
                       </div>
@@ -1925,7 +1925,7 @@ jobs:
         {/* ======================= COMPREHENSIVE FOOTER COMPONENT ============ */}
         {/* ==================================================================== */}
         <div className="border-t border-zinc-900 pt-5 mt-4 flex items-center justify-center px-1 text-[11px] sm:text-xs text-zinc-550">
-          <span>© 2026 あまぞん GO!! PORTFOLIO CO., LTD.</span>
+          <span>© 2026 モノレポ PORTFOLIO CO., LTD.</span>
         </div>
       <Analytics />
 

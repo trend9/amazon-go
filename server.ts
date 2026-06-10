@@ -460,9 +460,9 @@ app.get("/rss.xml", async (req, res) => {
   let xml = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
   xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n`;
   xml += `<channel>\n`;
-  xml += `  <title>あまぞん GO!! - QOL向上商品レビューメディア</title>\n`;
+  xml += `  <title>モノレポ - QOL向上商品レビューメディア</title>\n`;
   xml += `  <link>${baseUrl}</link>\n`;
-  xml += `  <description>専門バイヤーによる本音のAmazon商品レビュー自動配信フィード</description>\n`;
+  xml += `  <description>専門バイヤーによる本音の商品レビュー自動配信フィード</description>\n`;
   xml += `  <language>ja</language>\n`;
   xml += `  <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml" />\n`;
 
@@ -514,12 +514,12 @@ app.get("/review/:id", async (req, res, next) => {
 
       // Inject SEO tags and schema markup before </head>
       const seoTags = `
-  <title>${article.title} | あまぞん GO!!</title>
+  <title>${article.title} | モノレポ</title>
   <meta name="description" content="${article.introText || ''}" />
   <meta property="og:title" content="${article.title}" />
   <meta property="og:description" content="${article.introText || ''}" />
   <meta property="og:image" content="${article.imageUrl || ''}" />
-  <meta property="og:url" content="https://${req.headers.host || 'www.amazon-go.jp'}/review/${article.id}" />
+  <meta property="og:url" content="https://${req.headers.host || 'monorepo-go.vercel.app'}/review/${article.id}" />
   <meta property="og:type" content="article" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${article.title}" />
@@ -543,7 +543,7 @@ app.get("/review/:id", async (req, res, next) => {
       "@type": "Review",
       "author": {
         "@type": "Person",
-        "name": "あまぞん GO!! 専門バイヤー"
+        "name": "モノレポ 専門バイヤー"
       },
       "reviewRating": {
         "@type": "Rating",
@@ -557,7 +557,7 @@ app.get("/review/:id", async (req, res, next) => {
 `;
       // Replace existing title if present, otherwise prepend
       if (html.includes("<title>")) {
-        html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${article.title} | あまぞん GO!!</title>`);
+        html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${article.title} | モノレポ</title>`);
       }
       html = html.replace("</head>", `${seoTags}\n</head>`);
     }
